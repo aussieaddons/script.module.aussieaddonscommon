@@ -1,0 +1,8 @@
+*.swp
+*.pyc
+*.pyo
+*.zip
+.cache
+.deploy
+.tox
+__pycache__
