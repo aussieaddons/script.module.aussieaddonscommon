@@ -33,7 +33,7 @@ def get_addon_version():
 
 
 def descape_entity(m, defs=htmlentitydefs.entitydefs):
-    """translate one entity to its ISO Latin value"""
+    """Translate one entity to its ISO Latin value"""
     try:
         return defs[m.group(1)]
     except KeyError:
@@ -41,7 +41,7 @@ def descape_entity(m, defs=htmlentitydefs.entitydefs):
 
 
 def descape(string):
-    """translate html chars and ensure ascii"""
+    """Translate html chars and ensure ascii"""
     string = ensure_ascii(string)
     string = PATTERN.sub(descape_entity, string)
     return string
@@ -76,7 +76,8 @@ def ensure_ascii(s):
     """Force a string to acsii
 
     This is especially useful for Kodi menu items which will barf if given
-    anything other than ascii"""
+    anything other than ascii
+    """
     if not isinstance(s, unicode):
         s = str(s)
         s = s.decode("utf-8")
@@ -101,7 +102,7 @@ def log_error(message=None):
               exc_value), level=xbmc.LOGERROR)
     try:
         xbmc.log(traceback.print_exc(), level=xbmc.LOGERROR)
-    except:
+    except Exception:
         pass
 
 

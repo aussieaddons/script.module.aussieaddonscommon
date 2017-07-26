@@ -2,6 +2,8 @@
 <addon id="script.module.aussieaddonscommon" name="Aussie Add-ons Common" provider-name="Aussie Add-ons" version="1.0.0">
   <requires>
     <import addon="xbmc.python" version="2.1.0" />
+    <import addon="script.module.requests"/>
+    <import addon="script.module.issuereporter"/>
   </requires>
   <extension library="lib" point="xbmc.python.module" />
   <extension point="xbmc.addon.metadata">
