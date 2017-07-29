@@ -2,7 +2,6 @@ import htmlentitydefs
 import os
 import re
 import sys
-import textwrap
 import traceback
 import unicodedata
 import urllib
@@ -91,45 +90,52 @@ def log(s):
              level=xbmc.LOGNOTICE)
 
 
+def format_error_summary():
+    """Format error summary
+
+    From the traceback, generate a nicely formatted string showing the
+    error message.
+    """
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    return "%s (%d) - %s: %s" % (exc_traceback.tb_frame.f_code.co_name,
+                                 exc_traceback.tb_lineno,
+                                 exc_type.__name__,
+                                 ', '.join(exc_value.args))
+
+
 def log_error(message=None):
     """Logging helper for exceptions"""
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-    if message:
-        exc_value = message
-    xbmc.log("[%s v%s] ERROR: %s (%d) - %s" %
-             (get_addon_name(), get_addon_version(),
-              exc_traceback.tb_frame.f_code.co_name, exc_traceback.tb_lineno,
-              exc_value), level=xbmc.LOGERROR)
     try:
+        xbmc.log("[%s v%s] ERROR: %s" %
+                 (get_addon_name(), get_addon_version(),
+                  format_error_summary()), level=xbmc.LOGERROR)
         xbmc.log(traceback.print_exc(), level=xbmc.LOGERROR)
     except Exception:
         pass
 
 
-def format_dialog_error(err=None):
-    """Format an error message suitable for a Kodi dialog box"""
-    # Generate a list of lines for use in XBMC dialog
-    msg = ''
-    content = []
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-    content.append("%s v%s Error" % (get_addon_name(), get_addon_version()))
-    content.append(str(exc_value))
-    if err:
-        msg = " - %s" % err
-    content.append("%s (%d) %s" % (exc_traceback.tb_frame.f_code.co_name,
-                                   exc_traceback.tb_lineno,
-                                   msg))
-    return content
-
-
 def format_dialog_message(msg, title=None):
-    """Format a message suitable for a Kodi dialog box"""
-    if not title:
-        title = "%s v%s" % (get_addon_name(), get_addon_version())
-    # Add title to the first pos of the textwrap list
-    content = textwrap.wrap(msg, 60)
-    content.insert(0, title)
-    return content
+    """Format a message suitable for a Kodi dialog box
+
+    Valid input for msg is either a string (supporting newline chars) or a
+    list of lines, with an optional title.
+    """
+    content = []
+    if title:
+        content.append(title)
+    else:
+        content.append("%s v%s" % (get_addon_name(), get_addon_version()))
+
+    if type(msg) is str:
+        msg = msg.split('\n')
+
+    return content + msg
+
+
+def format_dialog_error(msg=None):
+    """Format an error message suitable for a Kodi dialog box"""
+    title = "%s v%s ERROR" % (get_addon_name(), get_addon_version())
+    return format_dialog_message(format_error_summary(), title=title)
 
 
 def dialog_message(msg, title=None):
@@ -237,7 +243,7 @@ def can_send_error(trace):
     return False
 
 
-def handle_error(msg, exc=None):
+def handle_error(message):
     """Issue reporting handler
 
     This function should be called in the exception part of a try/catch block
@@ -247,20 +253,25 @@ def handle_error(msg, exc=None):
     errors (like timeouts, etc), any errors from old versions of an add-on or
     any duplicate reports from a user.
     """
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+    # AttributeError: global name 'foo' is not defined
+    error_message = '%s: %s' % (exc_type.__name__, ', '.join(exc_value.args))
+
     traceback_str = traceback.format_exc()
     log(traceback_str)
     report_issue = False
 
     # Don't show any dialogs when user cancels
-    if 'SystemExit' in traceback_str:
+    if exc_type.__name__ == 'SystemExit':
         return
 
     d = xbmcgui.Dialog()
     if d:
-        message = format_dialog_error(msg)
+        message = format_dialog_error(message)
 
         # Work out if we should allow an error report
-        send_error = can_send_error(traceback_str)
+        send_error = can_send_error(error_message)
 
         # Some transient network errors we don't want any reports about
         ignore_errors = ['The read operation timed out',
@@ -270,11 +281,11 @@ def handle_error(msg, exc=None):
                          'Connection reset by peer',
                          'HTTP Error 404: Not Found']
 
-        if any(s in traceback_str for s in ignore_errors):
+        if any(s in exc_type.__name__ for s in ignore_errors):
             send_error = False
 
         # Don't allow reporting for these (mostly) user or service errors
-        if type(exc).__name__ in ['AussieAddonsNonFatalException']:
+        if exc_type.__name__ in ['AussieAddonsNonFatalException']:
             send_error = False
 
         # Only allow error reporting if the issue_reporting is available
@@ -285,37 +296,44 @@ def handle_error(msg, exc=None):
             send_error = False
 
         if send_error:
-            latest_version = issue_reporter.get_latest_version()
-            version_string = '.'.join([str(i) for i in latest_version])
-            if not issue_reporter.is_latest_version(get_addon_version(),
-                                                    latest_version):
-                message.append('Your version of this add-on is outdated. '
-                               'Please try upgrading to the latest version: '
-                               'v%s' % version_string)
-                d.ok(*message)
-                return
-
-            # Only report if we haven't done one already
             try:
-                message.append('Would you like to automatically '
-                               'report this error?')
-                report_issue = d.yesno(*message)
-            except Exception:
+                github_repo = 'xbmc-catchuptv-au/%s' % get_addon_id()
+                latest_version = issue_reporter.get_latest_version(github_repo)
+                version_string = '.'.join([str(i) for i in latest_version])
+                if not issue_reporter.is_latest_version(get_addon_version(),
+                                                        latest_version):
+                    message.append('Your version of this add-on is outdated. '
+                                   'Please upgrade to the latest version:'
+                                   'v%s' % version_string)
+                    d.ok(*message)
+                    return
+
+                # Only report if we haven't done one already
+                try:
+                    message.append('Would you like to automatically '
+                                   'report this error?')
+                    report_issue = d.yesno(*message)
+                except Exception:
+                    message.append('If this error continues to occur, '
+                                   'please report it to our issue tracker.')
+                    d.ok(*message)
+            except Exception as e:
+                log('Failed to send error: %s' % str(e))
                 message.append('If this error continues to occur, '
                                'please report it to our issue tracker.')
                 d.ok(*message)
         else:
-            # Just show the message
             d.ok(*message)
 
     if report_issue:
         log("Reporting issue to GitHub...")
-        issue_url = issue_reporter.report_issue(traceback_str)
+        issue_url = issue_reporter.report_issue(error_message, traceback_str)
+
         if issue_url:
-            # Split the url here to make sure it fits in our dialog
-            split_url = issue_url.replace('/xbmc', ' /xbmc')
+            # Split the URL just so it fits better in the dialog window
+            split_url = issue_url.replace('/issue-reports', ' /issue-reports')
             d.ok('%s v%s Error' % (get_addon_name(), get_addon_version()),
-                 'Thanks! Your issue has been reported to: %s' % split_url)
+                 'Thanks! Your issue has been reported to:', split_url)
 
             # Touch our file to prevent more than one error report
-            save_last_error_report(traceback_str)
+            save_last_error_report(error_message)
