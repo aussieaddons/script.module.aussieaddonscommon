@@ -1,7 +1,13 @@
-class AussieAddonsNonFatalException(Exception):
-    """A custom non-fatal exception
+class AussieAddonsException(Exception):
+    """Aussie Add-ons custom exception
 
-    This exception can be thrown when catching other exceptions, and it will
-    be explicitly ignored from automatic error reports
+    This exception can be thrown with the reportable arg set which can
+    determine whether or not it is allowed to be sent as an automatic
+    error report
     """
-    pass
+    def __init__(self, message, reportable=False):
+        super(AussieAddonsException, self).__init__(message)
+        self.reportable = False
+
+    def is_reportable(self):
+        return self.reportable

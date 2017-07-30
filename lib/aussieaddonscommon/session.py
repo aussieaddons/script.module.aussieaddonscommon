@@ -2,7 +2,7 @@ import requests
 import ssl
 import utils
 
-from exceptions import AussieAddonsNonFatalException
+from exceptions import AussieAddonsException
 
 from requests.adapters import HTTPAdapter
 from requests.exceptions import SSLError
@@ -53,10 +53,10 @@ class Session(requests.Session):
         except SSLError as e:
             msg = ('SSL Error: {0}. This is usually due to an old version of '
                    'Kodi. Please upgrade to Kodi v17 or later.'.format(e))
-            raise AussieAddonsNonFatalException(msg)
+            raise AussieAddonsException(msg)
         except requests.exceptions.HTTPError as e:
             raise e
         except Exception as e:
-            raise AussieAddonsNonFatalException('Error: {0}'.format(e))
+            raise AussieAddonsException('Error: {0}'.format(e))
 
         return req

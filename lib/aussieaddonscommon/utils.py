@@ -284,9 +284,13 @@ def handle_error(message):
         if any(s in exc_type.__name__ for s in ignore_errors):
             send_error = False
 
-        # Don't allow reporting for these (mostly) user or service errors
-        if exc_type.__name__ in ['AussieAddonsNonFatalException']:
-            send_error = False
+        # If it's one of our custom exceptions, and it has reportable = False
+        # set, then we'll honour that here.
+        try:
+            if not exc_value.is_reportable():
+                send_error = False
+        except AttributeError:
+            pass
 
         # Only allow error reporting if the issue_reporting is available
         try:
