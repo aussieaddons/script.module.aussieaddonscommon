@@ -8,6 +8,8 @@ import xbmc
 
 from aussieaddonscommon import utils
 
+from distutils.version import LooseVersion
+
 
 GITHUB_API_URL = 'https://api.github.com/repos/xbmc-catchuptv-au/issue-reports'
 # aussieaddonsbot token
@@ -112,36 +114,29 @@ def fetch_tags(github_repo):
 def get_versions(github_repo):
     """Get versions from tags
 
-    Assemble a list of version from the tags, and split them into lists
+    Assemble a list of versions from the tags and strip any leading 'v'
     """
     tags = fetch_tags(github_repo)
-    tag_names = map(lambda tag: tag['name'], tags)
-    versions = filter(lambda tag: re.match(r'v(\d+)\.(\d+)(?:\.(\d+))?', tag),
-                      tag_names)
-    return map(lambda tag: map(lambda v: int(v), tag[1::].split('.')),
-               versions)
+    versions = map(lambda tag: tag['name'].lstrip('v'), tags)
+    return versions
 
 
 def get_latest_version(github_repo):
-    """Get latest version tag
+    """Get latest version number
 
-    Sort the list, and get the latest version
+    Sort the list of versions, and get the latest version
     """
     versions = get_versions(github_repo)
-    latest_version = sorted(versions, reverse=True)[0]
-    version_string = '.'.join([str(i) for i in latest_version])
-    return version_string
+    latest_version = sorted(versions, reverse=True, key=LooseVersion)[0]
+    return latest_version
 
 
-def is_latest_version(current_version, latest_version):
-    """Is latest version
+def is_not_latest_version(current_version, latest_version):
+    """Is not latest version
 
-    Compare current_version (x.x.x string) and latest_version ([x,x,x] list)
+    Compare current_version and latest_version as x.x.x strings
     """
-    if current_version.startswith('v'):
-        current_version = current_version[1::]
-    current_version = map(lambda v: int(v), current_version.split('.'))
-    return current_version == latest_version
+    return LooseVersion(current_version) < LooseVersion(latest_version)
 
 
 def not_already_reported(error):
@@ -181,7 +176,7 @@ def save_last_error_report(error):
 
 def can_send_report(exc_type, exc_value, exc_traceback):
     """Can we send an error report
-    
+
     Based on a set of criteria, return a boolean determining whether the user
     should be allowed to send an error report.
 
@@ -322,7 +317,7 @@ def report_issue(title, traceback=None):
     utils.log('Sending report...')
     try:
         report = generate_report(title, log_url=log_url, traceback=traceback)
-        report_url = upload_report(report) 
+        report_url = upload_report(report)
         utils.log('Report URL: %s' % report_url)
         return report_url
     except Exception:

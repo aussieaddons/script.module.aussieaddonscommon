@@ -12,6 +12,9 @@ import xbmcgui
 
 ADDON = xbmcaddon.Addon()
 
+# Used for fetching latest version information about the add-on
+GITHUB_ORG = 'xbmc-catchuptv-au'
+
 # HTML code escape
 PATTERN = re.compile("&(\w+?);")
 
@@ -111,7 +114,7 @@ def format_error_summary():
     exc_type, exc_value, exc_traceback = sys.exc_info()
     return "%s (%d) - %s: %s." % (
         os.path.basename(exc_traceback.tb_frame.f_code.co_filename),
-        exc_traceback.tb_lineno, exc_type.__name__, 
+        exc_traceback.tb_lineno, exc_type.__name__,
         ', '.join(exc_value.args))
 
 
@@ -203,7 +206,7 @@ def get_kodi_major_version():
     return int(version)
 
 
-def log_xbmc_platform_version():
+def log_kodi_platform_version():
     """Log our Kodi version and platform for debugging"""
     version = get_kodi_version()
     platform = get_platform()
@@ -263,13 +266,14 @@ def handle_error(message):
         xbmcgui.Dialog().ok(*message)
         return
 
-    github_repo = 'xbmc-catchuptv-au/%s' % get_addon_id()
+    github_repo = '%s/%s' % (GITHUB_ORG, get_addon_id())
     latest = issue_reporter.get_latest_version(github_repo)
+    version = get_addon_version()
 
-    if not issue_reporter.is_latest_version(get_addon_version(), latest):
-        message.append('Your version of this add-on is outdated. Please '
+    if issue_reporter.is_not_latest_version(version, latest):
+        message.append('Your version of this add-on (v%s) is outdated. Please '
                        'upgrade to the latest version: '
-                       'v%s' % latest)
+                       'v%s' % (version, latest))
         xbmcgui.Dialog().ok(*message)
         return
 
@@ -279,4 +283,4 @@ def handle_error(message):
         if xbmcgui.Dialog().yesno(*message):
             issue_url = send_report(error, traceback=trace)
             if issue_url:
-                save_last_error_report(error)
+                issue_reporter.save_last_error_report(error)
