@@ -83,11 +83,23 @@ def ensure_ascii(s):
     return unicodedata.normalize('NFC', s).encode('ascii', 'ignore')
 
 
+def get_file_dir():
+    """Get our add-on working directory
+
+    Make our add-on working directory if it doesn't exist and
+    return it.
+    """
+    filedir = os.path.join(
+        xbmc.translatePath('special://temp/'), get_addon_id())
+    if not os.path.isdir(filedir):
+        os.mkdir(filedir)
+    return filedir
+
+
 def log(s):
     """Logging helper"""
     xbmc.log("[%s v%s] %s" % (get_addon_name(), get_addon_version(),
-                              ensure_ascii(s)),
-             level=xbmc.LOGNOTICE)
+                              ensure_ascii(s)), level=xbmc.LOGNOTICE)
 
 
 def format_error_summary():
@@ -97,10 +109,10 @@ def format_error_summary():
     error message.
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
-    return "%s (%d) - %s: %s" % (exc_traceback.tb_frame.f_code.co_name,
-                                 exc_traceback.tb_lineno,
-                                 exc_type.__name__,
-                                 ', '.join(exc_value.args))
+    return "%s (%d) - %s: %s." % (
+        os.path.basename(exc_traceback.tb_frame.f_code.co_filename),
+        exc_traceback.tb_lineno, exc_type.__name__, 
+        ', '.join(exc_value.args))
 
 
 def log_error(message=None):
@@ -120,11 +132,10 @@ def format_dialog_message(msg, title=None):
     Valid input for msg is either a string (supporting newline chars) or a
     list of lines, with an optional title.
     """
-    content = []
     if title:
-        content.append(title)
+        content = [title]
     else:
-        content.append("%s v%s" % (get_addon_name(), get_addon_version()))
+        content = ["%s v%s" % (get_addon_name(), get_addon_version())]
 
     if type(msg) is str:
         msg = msg.split('\n')
@@ -135,14 +146,14 @@ def format_dialog_message(msg, title=None):
 def format_dialog_error(msg=None):
     """Format an error message suitable for a Kodi dialog box"""
     title = "%s v%s ERROR" % (get_addon_name(), get_addon_version())
-    return format_dialog_message(format_error_summary(), title=title)
+    error = format_error_summary()
+    return format_dialog_message(error, title=title)
 
 
 def dialog_message(msg, title=None):
     """Helper function for a simple 'OK' dialog"""
     content = format_dialog_message(msg, title)
-    d = xbmcgui.Dialog()
-    d.ok(*content)
+    xbmcgui.Dialog().ok(*content)
 
 
 def get_platform():
@@ -171,76 +182,55 @@ def get_platform():
     return "Unknown"
 
 
-def get_xbmc_build():
+def get_kodi_build():
     """Return the Kodi build version"""
-    return xbmc.getInfoLabel("System.BuildVersion")
+    try:
+        return xbmc.getInfoLabel("System.BuildVersion")
+    except Exception:
+        return
 
 
-def get_xbmc_version():
+def get_kodi_version():
     """Return the version number of Kodi"""
-    build = get_xbmc_build()
+    build = get_kodi_build()
     version = build.split(' ')[0]
     return version
 
 
-def get_xbmc_major_version():
+def get_kodi_major_version():
     """Return the major version number of Kodi"""
-    version = get_xbmc_version().split('.')[0]
+    version = get_kodi_version().split('.')[0]
     return int(version)
 
 
 def log_xbmc_platform_version():
     """Log our Kodi version and platform for debugging"""
-    version = get_xbmc_version()
+    version = get_kodi_version()
     platform = get_platform()
     log("Kodi %s running on %s" % (version, platform))
 
 
-def get_file_dir():
-    """Get our add-on working directory
-
-    Make our add-on working directory if it doesn't exist and
-    return it.
-    """
-    filedir = os.path.join(
-        xbmc.translatePath('special://temp/'), get_addon_id())
-    if not os.path.isdir(filedir):
-        os.mkdir(filedir)
-    return filedir
+def user_report():
+    send_report('User initiated report')
 
 
-def save_last_error_report(trace):
-    """Save a copy of our last error report"""
+def send_report(title, traceback=None):
     try:
-        rfile = os.path.join(get_file_dir(), 'last_report_error.txt')
-        with open(rfile, 'w') as f:
-            f.write(trace)
-    except Exception:
-        log("Error writing error report file")
+        import issue_reporter
+        log("Reporting issue to GitHub")
 
+        # Show dialog spinner, and close afterwards
+        xbmc.executebuiltin("ActivateWindow(busydialog)")
+        report_url = issue_reporter.report_issue(title)
 
-def can_send_error(trace):
-    """Is the user allowed to send this error?
-
-    Check to see if our new error message is different from the last
-    successful error report. If it is, or the file doesn't exist, then
-    we'll return True
-    """
-    try:
-        rfile = os.path.join(get_file_dir(), 'last_report_error.txt')
-
-        if not os.path.isfile(rfile):
-            return True
-        else:
-            f = open(rfile, 'r')
-            report = f.read()
-            if report != trace:
-                return True
-    except Exception:
-        log("Error checking error report file")
-
-    log("Not allowing error report. Last report matches this one")
-    return False
+        split_url = report_url.replace('/issue-reports', ' /issue-reports')
+        dialog_message(['Thanks! Your issue has been reported to: ',
+                       split_url])
+        return report_url
+    except Exception as e:
+        log('Failed to send report: %s' % str(e))
+    finally:
+        xbmc.executebuiltin("Dialog.Close(busydialog)")
 
 
 def handle_error(message):
@@ -255,89 +245,38 @@ def handle_error(message):
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
 
-    # AttributeError: global name 'foo' is not defined
-    error_message = '%s: %s' % (exc_type.__name__, ', '.join(exc_value.args))
-
-    traceback_str = traceback.format_exc()
-    log(traceback_str)
-    report_issue = False
-
     # Don't show any dialogs when user cancels
     if exc_type.__name__ == 'SystemExit':
         return
 
-    d = xbmcgui.Dialog()
-    if d:
-        message = format_dialog_error(message)
+    trace = traceback.format_exc()
+    log(trace)
 
-        # Work out if we should allow an error report
-        send_error = can_send_error(error_message)
+    # AttributeError: global name 'foo' is not defined
+    error = '%s: %s.' % (exc_type.__name__, ', '.join(exc_value.args))
 
-        # Some transient network errors we don't want any reports about
-        ignore_errors = ['The read operation timed out',
-                         'IncompleteRead',
-                         'getaddrinfo failed',
-                         'No address associated with hostname',
-                         'Connection reset by peer',
-                         'HTTP Error 404: Not Found']
+    message = format_dialog_error(message)
 
-        if any(s in exc_type.__name__ for s in ignore_errors):
-            send_error = False
+    import issue_reporter
 
-        # If it's one of our custom exceptions, and it has reportable = False
-        # set, then we'll honour that here.
-        try:
-            if not exc_value.is_reportable():
-                send_error = False
-        except AttributeError:
-            pass
+    if not issue_reporter.not_already_reported(error):
+        xbmcgui.Dialog().ok(*message)
+        return
 
-        # Only allow error reporting if the issue_reporting is available
-        try:
-            import issue_reporter
-        except ImportError:
-            log('Issue reporter module not available')
-            send_error = False
+    github_repo = 'xbmc-catchuptv-au/%s' % get_addon_id()
+    latest = issue_reporter.get_latest_version(github_repo)
 
-        if send_error:
-            try:
-                github_repo = 'xbmc-catchuptv-au/%s' % get_addon_id()
-                latest_version = issue_reporter.get_latest_version(github_repo)
-                version_string = '.'.join([str(i) for i in latest_version])
-                if not issue_reporter.is_latest_version(get_addon_version(),
-                                                        latest_version):
-                    message.append('Your version of this add-on is outdated. '
-                                   'Please upgrade to the latest version:'
-                                   'v%s' % version_string)
-                    d.ok(*message)
-                    return
+    if not issue_reporter.is_latest_version(get_addon_version(), latest):
+        message.append('Your version of this add-on is outdated. Please '
+                       'upgrade to the latest version: '
+                       'v%s' % latest)
+        xbmcgui.Dialog().ok(*message)
+        return
 
-                # Only report if we haven't done one already
-                try:
-                    message.append('Would you like to automatically '
-                                   'report this error?')
-                    report_issue = d.yesno(*message)
-                except Exception:
-                    message.append('If this error continues to occur, '
-                                   'please report it to our issue tracker.')
-                    d.ok(*message)
-            except Exception as e:
-                log('Failed to send error: %s' % str(e))
-                message.append('If this error continues to occur, '
-                               'please report it to our issue tracker.')
-                d.ok(*message)
-        else:
-            d.ok(*message)
-
-    if report_issue:
-        log("Reporting issue to GitHub...")
-        issue_url = issue_reporter.report_issue(error_message, traceback_str)
-
-        if issue_url:
-            # Split the URL just so it fits better in the dialog window
-            split_url = issue_url.replace('/issue-reports', ' /issue-reports')
-            d.ok('%s v%s Error' % (get_addon_name(), get_addon_version()),
-                 'Thanks! Your issue has been reported to:', split_url)
-
-            # Touch our file to prevent more than one error report
-            save_last_error_report(error_message)
+    if issue_reporter.can_send_report(exc_type, exc_value, exc_traceback):
+        message.append('Would you like to automatically '
+                       'report this error?')
+        if xbmcgui.Dialog().yesno(*message):
+            issue_url = send_report(error, traceback=trace)
+            if issue_url:
+                save_last_error_report(error)

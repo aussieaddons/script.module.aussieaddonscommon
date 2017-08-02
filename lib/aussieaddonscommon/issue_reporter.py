@@ -11,7 +11,7 @@ from aussieaddonscommon import utils
 
 GITHUB_API_URL = 'https://api.github.com/repos/xbmc-catchuptv-au/issue-reports'
 # aussieaddonsbot token
-GITHUB_API_TOKEN = '535975f813387efd7df6727a5f8dbbee3718325a'
+GITHUB_API_TOKEN = '9ef8e046a69b7e62a1bfc4f89fc9eaf900f74e91'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
 
@@ -76,7 +76,7 @@ def get_isp():
     return isp
 
 
-def get_xbmc_log():
+def get_kodi_log():
     """Get XBMC log
 
     Fetch and read the Kodi log
@@ -97,14 +97,6 @@ def get_xbmc_log():
     for pattern, repl in LOG_FILTERS:
         log_content = re.sub(pattern, repl, log_content)
     return log_content
-
-
-def get_xbmc_version():
-    """Fetch the Kodi build version"""
-    try:
-        return xbmc.getInfoLabel("System.BuildVersion")
-    except Exception:
-        return 'Unknown'
 
 
 def fetch_tags(github_repo):
@@ -136,7 +128,9 @@ def get_latest_version(github_repo):
     Sort the list, and get the latest version
     """
     versions = get_versions(github_repo)
-    return sorted(versions, reverse=True)[0]
+    latest_version = sorted(versions, reverse=True)[0]
+    version_string = '.'.join([str(i) for i in latest_version])
+    return version_string
 
 
 def is_latest_version(current_version, latest_version):
@@ -150,10 +144,89 @@ def is_latest_version(current_version, latest_version):
     return current_version == latest_version
 
 
-def format_issue(traceback):
-    """Build our formatted GitHub issue string"""
-    # os.uname() is not available on Windows, so we make this optional.
+def not_already_reported(error):
+    """Is the user allowed to send this error?
+
+    Check to see if our new error message is different from the last
+    successful error report. If it is, or the file doesn't exist, then
+    we'll return True
+    """
     try:
+        rfile = os.path.join(utils.get_file_dir(), 'last_report_error.txt')
+
+        if not os.path.isfile(rfile):
+            return True
+        else:
+            f = open(rfile, 'r')
+            report = f.read()
+            if report != error:
+                return True
+    except Exception as e:
+        utils.log("Error checking error report file: %s" % str(e))
+        return False
+
+    utils.log("Not allowing error report. Last report matches this one")
+    return False
+
+
+def save_last_error_report(error):
+    """Save a copy of our last error report"""
+    try:
+        rfile = os.path.join(utils.get_file_dir(), 'last_report_error.txt')
+        with open(rfile, 'w') as f:
+            f.write(error)
+    except Exception:
+        utils.log("Error writing error report file")
+
+
+def can_send_report(exc_type, exc_value, exc_traceback):
+    """Can we send an error report
+    
+    Based on a set of criteria, return a boolean determining whether the user
+    should be allowed to send an error report.
+
+    We prevent error reports being sent if:
+      * The same report has already been sent
+      * The error isn't blacklisted (mostly user networking issues)
+    """
+
+    # AttributeError: global name 'foo' is not defined
+    error = '%s: %s' % (exc_type.__name__, ', '.join(exc_value.args))
+
+    # Don't show any dialogs when user cancels
+    if exc_type.__name__ == 'SystemExit':
+        return False
+
+    # Work out if we should allow an error report
+    if not not_already_reported(error):
+        return False
+
+    # Some transient network errors we don't want any reports about
+    blacklist_errors = ['The read operation timed out',
+                        'IncompleteRead',
+                        'getaddrinfo failed',
+                        'No address associated with hostname',
+                        'Connection reset by peer',
+                        'HTTP Error 404: Not Found']
+
+    if any(s in exc_type.__name__ for s in blacklist_errors):
+        return False
+
+    # If it's one of our custom exceptions, and it has reportable = False
+    # set, then we'll honour that here.
+    try:
+        if not exc_value.is_reportable():
+            return False
+    except AttributeError:
+        pass
+
+    return True
+
+
+def generate_report(title, log_url=None, traceback=None):
+    """Build our formatted GitHub issue string"""
+    try:
+        # os.uname() is not available on Windows
         uname = os.uname()
         os_string = ' (%s %s %s)' % (uname[0], uname[2], uname[4])
     except AttributeError:
@@ -165,32 +238,56 @@ def format_issue(traceback):
         "**Add-on Name:** %s" % utils.get_addon_name(),
         "**Add-on ID:** %s" % utils.get_addon_id(),
         "**Add-on Version:** %s" % utils.get_addon_version(),
-        "**Kodi Version:** %s" % get_xbmc_version(),
+        "**Kodi Version:** %s" % utils.get_kodi_version(),
         "**Python Version:** %s" % sys.version.replace('\n', ''),
         "**Operating System:** %s %s" % (sys.platform, os_string),
         "**IP Address:** %s" % get_public_ip(),
         "**ISP:** %s" % get_isp(),
         "**Kodi URL:** %s" % sys.argv[2],
         "**Python Path:**\n```\n%s\n```" % '\n'.join(sys.path),
-        "\n## Traceback\n```\n%s\n```" % traceback,
     ]
 
-    log_url = upload_log()
+    if traceback:
+        content.append("\n## Traceback\n```\n%s\n```" % traceback)
+
     if log_url:
         content.append("\n[Full log](%s)" % log_url)
 
-    return "\n".join(content)
+    short_id = utils.get_addon_id().split('.')[-1]
+    report = {
+        'title': '[%s] %s' % (short_id, title),
+        'body': '\n'.join(content)
+    }
+
+    return report
+
+
+def upload_report(report):
+    try:
+        response = urllib2.urlopen(make_request(ISSUE_API_URL),
+                                   json.dumps(report))
+    except urllib2.HTTPError as e:
+        utils.log("Failed to report issue: HTTPError %s" % e.code)
+        return False
+    except urllib2.URLError as e:
+        utils.log("Failed to report issue: URLError %s" % e.reason)
+        return False
+
+    try:
+        return json.load(response)["html_url"]
+    except Exception:
+        utils.log("Failed to parse API response: %s" % response.read())
 
 
 def upload_log():
     """Upload our full Kodi log as a GitHub gist"""
     try:
-        log_content = get_xbmc_log()
+        log_content = get_kodi_log()
     except Exception as e:
         utils.log("Failed to read log: %s" % e)
-        return None
+        return
 
-    utils.log("Uploading log file")
+    utils.log('Sending log file...')
     try:
         data = {
             "files": {
@@ -213,25 +310,20 @@ def upload_log():
         utils.log("Failed to parse API response: %s" % response.read())
 
 
-def report_issue(error_message, traceback):
+def report_issue(title, traceback=None):
     """Report our issue to GitHub"""
 
-    short_id = utils.get_addon_id().split('.')[-1]
-
+    log_url = None
     try:
-        data = {
-            'title': '[%s] %s' % (short_id, error_message),
-            'body': format_issue(traceback),
-        }
-        response = urllib2.urlopen(make_request(ISSUE_API_URL),
-                                   json.dumps(data))
-    except urllib2.HTTPError as e:
-        utils.log("Failed to report issue: HTTPError %s" % e.code)
-        return False
-    except urllib2.URLError as e:
-        utils.log("Failed to report issue: URLError %s" % e.reason)
-        return False
-    try:
-        return json.load(response)["html_url"]
+        log_url = upload_log()
     except Exception:
-        utils.log("Failed to parse API response: %s" % response.read())
+        utils.log('Failed to upload log file')
+
+    utils.log('Sending report...')
+    try:
+        report = generate_report(title, log_url=log_url, traceback=traceback)
+        report_url = upload_report(report) 
+        utils.log('Report URL: %s' % report_url)
+        return report_url
+    except Exception:
+        utils.log('Failed to upload issue report')
