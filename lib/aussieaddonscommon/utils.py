@@ -256,7 +256,9 @@ def handle_error(message):
     log(trace)
 
     # AttributeError: global name 'foo' is not defined
-    error = '%s: %s.' % (exc_type.__name__, ', '.join(exc_value.args))
+    error = '%s: %s.' % (exc_type.__name__,
+                         ', '.join(e for e in exc_value.args
+                                   if type(e) == str))
 
     message = format_dialog_error(message)
 
