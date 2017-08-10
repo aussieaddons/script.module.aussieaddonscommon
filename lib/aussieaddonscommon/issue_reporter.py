@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import re
@@ -12,8 +13,7 @@ from distutils.version import LooseVersion
 
 
 GITHUB_API_URL = 'https://api.github.com/repos/xbmc-catchuptv-au/issue-reports'
-# aussieaddonsbot reporting token
-GITHUB_API_TOKEN = '1b7c06f39861f21d97863e4c7a2017fc0d103b30'
+GITHUB_API_TOKEN = '5bf620a0136121ec9c23cf5043e085cd573981e2'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
 
@@ -28,8 +28,9 @@ LOG_FILTERS = (
 
 def make_request(url):
     """Make our JSON request to GitHub"""
+    token = GITHUB_API_TOKEN[:20][::-1] + GITHUB_API_TOKEN[:20]
     return urllib2.Request(url, headers={
-        "Authorization": "token %s" % GITHUB_API_TOKEN,
+        "Authorization": "token %s" % token,
         "Content-Type": "application/json",
     })
 
