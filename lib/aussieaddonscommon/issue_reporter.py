@@ -13,7 +13,7 @@ from distutils.version import LooseVersion
 
 GITHUB_API_URL = 'https://api.github.com/repos/xbmc-catchuptv-au/issue-reports'
 # aussieaddonsbot reporting token
-GITHUB_API_TOKEN = '7dde657ad4596e7bfd2c538e08a80497cd45a181'
+GITHUB_API_TOKEN = '1b7c06f39861f21d97863e4c7a2017fc0d103b30'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
 
