@@ -28,7 +28,7 @@ LOG_FILTERS = (
 
 def make_request(url):
     """Make our JSON request to GitHub"""
-    token = GITHUB_API_TOKEN[:20][::-1] + GITHUB_API_TOKEN[:20]
+    token = GITHUB_API_TOKEN[:20][::-1] + GITHUB_API_TOKEN[20:]
     return urllib2.Request(url, headers={
         "Authorization": "token %s" % token,
         "Content-Type": "application/json",
