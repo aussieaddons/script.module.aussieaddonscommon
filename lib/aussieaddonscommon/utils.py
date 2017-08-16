@@ -224,7 +224,7 @@ def send_report(title, traceback=None):
 
         # Show dialog spinner, and close afterwards
         xbmc.executebuiltin("ActivateWindow(busydialog)")
-        report_url = issue_reporter.report_issue(title)
+        report_url = issue_reporter.report_issue(title, traceback)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
         dialog_message(['Thanks! Your issue has been reported to: ',
@@ -256,8 +256,8 @@ def handle_error(message):
     log(trace)
 
     # AttributeError: global name 'foo' is not defined
-    error = '%s: %s.' % (exc_type.__name__,
-                         ', '.join(str(e) for e in exc_value.args)
+    error = '%s: %s' % (exc_type.__name__,
+                        ', '.join(str(e) for e in exc_value.args))
 
     message = format_dialog_error(message)
 
