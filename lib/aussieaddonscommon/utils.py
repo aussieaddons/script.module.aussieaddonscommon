@@ -263,7 +263,12 @@ def handle_error(message):
 
     import issue_reporter
 
-    if not issue_reporter.not_already_reported(error):
+    can_send_report = issue_reporter.can_send_report(exc_type,
+                                                     exc_value,
+                                                     exc_traceback)
+
+    # If already reported, or a non-reportable error, just show the error
+    if not issue_reporter.not_already_reported(error) or not can_send_report:
         xbmcgui.Dialog().ok(*message)
         return
 
@@ -278,7 +283,7 @@ def handle_error(message):
         xbmcgui.Dialog().ok(*message)
         return
 
-    if issue_reporter.can_send_report(exc_type, exc_value, exc_traceback):
+    if can_send_report:
         message.append('Would you like to automatically '
                        'report this error?')
         if xbmcgui.Dialog().yesno(*message):
