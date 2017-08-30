@@ -89,8 +89,7 @@ class WebVTTReader(BaseReader):
             elif u'' == line:
                 if found_timing:
                     if not nodes:
-                        raise CaptionReadSyntaxError(
-                            u'Cue without content. (line %d)' % timing_line)
+                        pass
                     else:
                         found_timing = False
                         caption = Caption(
