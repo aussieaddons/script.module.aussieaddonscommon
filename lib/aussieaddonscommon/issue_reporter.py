@@ -1,4 +1,3 @@
-import base64
 import json
 import os
 import re
@@ -77,6 +76,24 @@ def get_isp():
         return "Unknown (parse failure)"
 
     return isp
+
+
+def check_country(message=None, nz_support=False):
+    """Check user is in supported country before submitting error report"""
+    try:
+        res = urllib2.urlopen('http://ipinfo.io/json')
+        data = json.loads(res.read())
+        country = data.get('country')
+    except:
+        country = None
+
+    whitelist = ['AU']
+    if nz_support:
+        whitelist.append('NZ')
+    if country and country not in whitelist:
+        return False
+
+    return True
 
 
 def get_kodi_log():

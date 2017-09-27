@@ -213,13 +213,22 @@ def log_kodi_platform_version():
     log("Kodi %s running on %s" % (version, platform))
 
 
-def user_report():
-    send_report('User initiated report')
+def user_report(nz_support=False):
+    send_report('User initiated report', nz_support=nz_support)
 
 
-def send_report(title, traceback=None):
+def send_report(title, traceback=None, nz_support=False):
     try:
         import issue_reporter
+        if not issue_reporter.check_country(nz_support=nz_support):
+            nz_text = ''
+            if nz_support:
+                nz_text = '/New Zealand'
+            msg = ('This add-on is not supported outside of Australia{0}. '
+                   'If you are in Australia{0} please disable your '
+                   'VPN/Smart DNS'.format(nz_text))
+            dialog_message(msg)
+            return
         log("Reporting issue to GitHub")
 
         # Show dialog spinner, and close afterwards
@@ -236,7 +245,7 @@ def send_report(title, traceback=None):
         xbmc.executebuiltin("Dialog.Close(busydialog)")
 
 
-def handle_error(message):
+def handle_error(message, nz_support=False):
     """Issue reporting handler
 
     This function should be called in the exception part of a try/catch block
@@ -270,6 +279,18 @@ def handle_error(message):
     # If already reported, or a non-reportable error, just show the error
     if not issue_reporter.not_already_reported(error) or not can_send_report:
         xbmcgui.Dialog().ok(*message)
+        return
+
+    # Don't allow reports from other countries/users running a VPN or Smart DNS
+    if not issue_reporter.check_country(message, nz_support):
+        nz_text = ''
+        if nz_support:
+            nz_text = '/New Zealand'
+        msg = ('This add-on is not supported outside of Australia{0}. '
+               'If you are in Australia{0} please disable your '
+               'VPN/Smart DNS'.format(nz_text))
+        message.append(msg)
+        dialog_message(message)
         return
 
     github_repo = '%s/%s' % (GITHUB_ORG, get_addon_id())
