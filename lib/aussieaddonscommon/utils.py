@@ -112,7 +112,7 @@ def format_error_summary():
     error message.
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
-    return "%s (%d) - %s: %s." % (
+    return "%s (%d) - %s: %s" % (
         os.path.basename(exc_traceback.tb_frame.f_code.co_filename),
         exc_traceback.tb_lineno, exc_type.__name__,
         ', '.join(exc_value.args))
@@ -217,21 +217,25 @@ def user_report():
     send_report('User initiated report')
 
 
-def send_report(title, traceback=None):
+def send_report(title, trace=None, connection_info=None):
     try:
         import issue_reporter
         log("Reporting issue to GitHub")
 
+        if not connection_info:
+            connection_info = issue_reporter.get_connection_info()
+
         # Show dialog spinner, and close afterwards
         xbmc.executebuiltin("ActivateWindow(busydialog)")
-        report_url = issue_reporter.report_issue(title, traceback)
+        report_url = issue_reporter.report_issue(title, trace, connection_info)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
         dialog_message(['Thanks! Your issue has been reported to: ',
                        split_url])
         return report_url
-    except Exception as e:
-        log('Failed to send report: %s' % str(e))
+    except Exception:
+        traceback.print_exc()
+        log('Failed to send report')
     finally:
         xbmc.executebuiltin("Dialog.Close(busydialog)")
 
@@ -263,12 +267,14 @@ def handle_error(message):
 
     import issue_reporter
 
-    can_send_report = issue_reporter.can_send_report(exc_type,
-                                                     exc_value,
-                                                     exc_traceback)
+    connection_info = issue_reporter.get_connection_info()
+    is_reportable = issue_reporter.is_reportable(exc_type,
+                                                 exc_value,
+                                                 exc_traceback)
 
     # If already reported, or a non-reportable error, just show the error
-    if not issue_reporter.not_already_reported(error) or not can_send_report:
+    if (not issue_reporter.not_already_reported(error) or not is_reportable
+            or not issue_reporter.valid_country(connection_info)):
         xbmcgui.Dialog().ok(*message)
         return
 
@@ -283,10 +289,11 @@ def handle_error(message):
         xbmcgui.Dialog().ok(*message)
         return
 
-    if can_send_report:
+    if is_reportable and issue_reporter.valid_country(connection_info):
         message.append('Would you like to automatically '
                        'report this error?')
         if xbmcgui.Dialog().yesno(*message):
-            issue_url = send_report(error, traceback=trace)
+            issue_url = send_report(error, trace=trace,
+                                    connection_info=connection_info)
             if issue_url:
                 issue_reporter.save_last_error_report(error)
