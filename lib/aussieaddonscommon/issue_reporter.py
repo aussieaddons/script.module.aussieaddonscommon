@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import sys
+import traceback
 import urllib2
 import xbmc
 
@@ -35,48 +36,20 @@ def make_request(url):
     })
 
 
-def get_public_ip():
-    """Get public IP
+def get_connection_info():
+    """Get connection details
 
-    Try and fetch the public IP of the reporter for logging
-    and reporting purposes
+    Fetch the details for the users Internet connection for logging
+    and filtering by country
     """
     try:
-        result = urllib2.urlopen('http://ipecho.net/plain', timeout=5)
-        data = str(result.read())
+        utils.log('Fetching connection information...')
+        result = urllib2.urlopen('http://ipinfo.io/json', timeout=5)
+        return json.loads(result.read())
     except Exception:
-        return "Unknown (lookup failure)"
-
-    try:
-        ip = re.compile(r'(\d+\.\d+\.\d+\.\d+)').search(data).group(1)
-    except Exception:
-        return "Unknown (parse failure)"
-
-    try:
-        hostname = socket.gethostbyaddr(ip)[0]
-        return "%s (%s)" % (ip, hostname)
-    except Exception:
-        return ip
-
-
-def get_isp():
-    """Get ISP
-
-    Try and fetch the ISP of the reporter for logging
-    and reporting purposes
-    """
-    try:
-        result = urllib2.urlopen('http://www.whoismyisp.org', timeout=5)
-        data = str(result.read())
-    except Exception:
-        return "Unknown (lookup failure)"
-
-    try:
-        isp = re.compile(r'<h1>(.*)</h1>').search(data).group(1)
-    except Exception:
-        return "Unknown (parse failure)"
-
-    return isp
+        utils.log(traceback.format_exc())
+        utils.log('Failed to fetch connection information')
+    return None
 
 
 def get_kodi_log():
@@ -175,7 +148,7 @@ def save_last_error_report(error):
         utils.log("Error writing error report file")
 
 
-def can_send_report(exc_type, exc_value, exc_traceback):
+def is_reportable(exc_type, exc_value, exc_traceback):
     """Can we send an error report
 
     Based on a set of criteria, return a boolean determining whether the user
@@ -219,7 +192,20 @@ def can_send_report(exc_type, exc_value, exc_traceback):
     return True
 
 
-def generate_report(title, log_url=None, traceback=None):
+def valid_country(connection_info):
+    """Check user is in supported country before submitting error report"""
+    whitelist = ['AU']
+
+    if not connection_info:
+        return False
+
+    if connection_info.get('country') in whitelist:
+        return True
+
+    return False
+
+
+def generate_report(title, log_url=None, trace=None, connection_info={}):
     """Build our formatted GitHub issue string"""
     try:
         # os.uname() is not available on Windows
@@ -234,17 +220,19 @@ def generate_report(title, log_url=None, traceback=None):
         "**Add-on Name:** %s" % utils.get_addon_name(),
         "**Add-on ID:** %s" % utils.get_addon_id(),
         "**Add-on Version:** %s" % utils.get_addon_version(),
+        "**Add-on URL:** %s" % sys.argv[2],
         "**Kodi Version:** %s" % utils.get_kodi_version(),
         "**Python Version:** %s" % sys.version.replace('\n', ''),
+        "**IP Address:** %s" % connection_info.get('ip', 'N/A'),
+        "**Hostname:** %s" % connection_info.get('hostname', 'N/A'),
+        "**Country:** %s" % connection_info.get('country', 'N/A'),
+        "**ISP:** %s" % connection_info.get('org', 'N/A'),
         "**Operating System:** %s %s" % (sys.platform, os_string),
-        "**IP Address:** %s" % get_public_ip(),
-        "**ISP:** %s" % get_isp(),
-        "**Kodi URL:** %s" % sys.argv[2],
         "**Python Path:**\n```\n%s\n```" % '\n'.join(sys.path),
     ]
 
-    if traceback:
-        content.append("\n## Traceback\n```\n%s\n```" % traceback)
+    if trace:
+        content.append("\n## Traceback\n```\n%s\n```" % trace)
 
     if log_url:
         content.append("\n[Full log](%s)" % log_url)
@@ -301,25 +289,29 @@ def upload_log():
         utils.log("Failed to save log: URLError %s" % e.reason)
         return False
     try:
-        return json.load(response)["html_url"]
+        return json.load(response)['html_url']
     except Exception:
         utils.log("Failed to parse API response: %s" % response.read())
 
 
-def report_issue(title, traceback=None):
+def report_issue(title, trace=None, connection_info=None):
     """Report our issue to GitHub"""
+
 
     log_url = None
     try:
         log_url = upload_log()
     except Exception:
-        utils.log('Failed to upload log file')
+        utils.log(traceback.format_exc())
+        raise Exception('Failed to upload log file')
 
     utils.log('Sending report...')
     try:
-        report = generate_report(title, log_url=log_url, traceback=traceback)
+        report = generate_report(title, log_url=log_url, trace=trace,
+                                 connection_info=connection_info)
         report_url = upload_report(report)
         utils.log('Report URL: %s' % report_url)
         return report_url
-    except Exception:
-        utils.log('Failed to upload issue report')
+    except Exception as e:
+        utils.log(traceback.format_exc())
+        raise Exception('Failed to upload issue report')
