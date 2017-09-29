@@ -268,13 +268,23 @@ def handle_error(message):
     import issue_reporter
 
     connection_info = issue_reporter.get_connection_info()
+    if not issue_reporter.valid_country(connection_info):
+        country_code = connection_info.get('country')
+        if country_code:
+            import countries
+            country_name = countries.countries.get(country_code, country_code)
+            message.append('Your country is reported as %s, but this service '
+                           'is probably geo-blocked to Australia.' %
+                           country_name)
+            xbmcgui.Dialog().ok(*message)
+        return
+
     is_reportable = issue_reporter.is_reportable(exc_type,
                                                  exc_value,
                                                  exc_traceback)
 
     # If already reported, or a non-reportable error, just show the error
-    if (not issue_reporter.not_already_reported(error) or not is_reportable
-            or not issue_reporter.valid_country(connection_info)):
+    if not issue_reporter.not_already_reported(error) or not is_reportable:
         xbmcgui.Dialog().ok(*message)
         return
 
