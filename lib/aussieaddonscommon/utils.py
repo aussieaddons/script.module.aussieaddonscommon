@@ -9,6 +9,10 @@ import xbmc
 import xbmcaddon
 import xbmcgui
 
+# This import is to deal with a python bug with strptime:
+#   ImportError: Failed to import _strptime because the import lockis
+#   held by another thread.
+import _strptime # noqa: F401
 
 ADDON = xbmcaddon.Addon()
 
