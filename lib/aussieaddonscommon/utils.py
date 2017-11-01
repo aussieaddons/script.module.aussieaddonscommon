@@ -144,8 +144,9 @@ def format_dialog_message(msg, title=None):
     else:
         content = ["%s v%s" % (get_addon_name(), get_addon_version())]
 
-    if type(msg) is str:
-        msg = msg.split('\n')
+    # Force unicode to str
+    if type(msg) in [str, unicode]:
+        msg = str(msg).split('\n')
 
     return content + msg
 
