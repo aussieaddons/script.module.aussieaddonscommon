@@ -205,6 +205,24 @@ def valid_country(connection_info):
     return False
 
 
+def blacklisted_hostname(connection_info):
+    """Check users hostname against a blacklist
+    
+    Some VPNs/proxys are known to content providers and will return 403 
+    responses. Blacklisting these to avoid issues reports caused by this.
+    """
+    blacklist = ['ipvanish', 'zoogvpn', 'sl-reverse']
+    
+    if not connection_info:
+        return False
+    
+    hostname = connection_info.get('hostname')
+    for item in blacklist:
+        if item in hostname:
+            return True
+
+    return False
+
 def generate_report(title, log_url=None, trace=None, connection_info={}):
     """Build our formatted GitHub issue string"""
     try:

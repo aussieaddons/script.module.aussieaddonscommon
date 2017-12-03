@@ -218,17 +218,48 @@ def log_kodi_platform_version():
     log("Kodi %s running on %s" % (version, platform))
 
 
+
+def check_country(connection_info, message=None):
+    if not message:
+        message = format_dialog_message('Issue report denied.')
+
+    import issue_reporter
+    valid_country = issue_reporter.valid_country(connection_info)
+    blacklisted_hostname = issue_reporter.blacklisted_hostname(connection_info)
+
+    if not valid_country:
+        country_code = connection_info.get('country')
+        if country_code:
+            import countries
+            country_name = countries.countries.get(country_code, country_code)
+            message.append('Your country is reported as %s, but this service '
+                           'is probably geo-blocked to Australia.' %
+                           country_name)
+            xbmcgui.Dialog().ok(*message)
+    
+    if blacklisted_hostname:
+        message.append('VPN/proxy detected that has been blocked by this '
+                       'content provider.')
+        xbmcgui.Dialog().ok(*message)
+
+    return valid_country and not blacklisted_hostname
+
+    
 def user_report():
-    send_report('User initiated report')
+    send_report('User initiated report', user_initiated=True)
 
 
-def send_report(title, trace=None, connection_info=None):
+def send_report(title, trace=None, connection_info=None, user_initiated=False):
     try:
         import issue_reporter
         log("Reporting issue to GitHub")
 
         if not connection_info:
             connection_info = issue_reporter.get_connection_info()
+
+        if user_initiated:
+            if not check_country(connection_info):
+                return
 
         # Show dialog spinner, and close afterwards
         xbmc.executebuiltin("ActivateWindow(busydialog)")
@@ -273,15 +304,8 @@ def handle_error(message):
     import issue_reporter
 
     connection_info = issue_reporter.get_connection_info()
-    if not issue_reporter.valid_country(connection_info):
-        country_code = connection_info.get('country')
-        if country_code:
-            import countries
-            country_name = countries.countries.get(country_code, country_code)
-            message.append('Your country is reported as %s, but this service '
-                           'is probably geo-blocked to Australia.' %
-                           country_name)
-            xbmcgui.Dialog().ok(*message)
+
+    if not check_country(connection_info, message):
         return
 
     is_reportable = issue_reporter.is_reportable(exc_type,
@@ -304,7 +328,7 @@ def handle_error(message):
         xbmcgui.Dialog().ok(*message)
         return
 
-    if is_reportable and issue_reporter.valid_country(connection_info):
+    if is_reportable:
         message.append('Would you like to automatically '
                        'report this error?')
         if xbmcgui.Dialog().yesno(*message):
