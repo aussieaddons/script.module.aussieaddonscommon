@@ -1,8 +1,6 @@
-import base64
 import json
 import os
 import re
-import socket
 import sys
 import traceback
 import urllib2
@@ -207,21 +205,22 @@ def valid_country(connection_info):
 
 def blacklisted_hostname(connection_info):
     """Check users hostname against a blacklist
-    
-    Some VPNs/proxys are known to content providers and will return 403 
+
+    Some VPNs/proxys are known to content providers and will return 403
     responses. Blacklisting these to avoid issues reports caused by this.
     """
     blacklist = ['ipvanish', 'zoogvpn', 'sl-reverse']
-    
+
     if not connection_info:
         return False
-    
+
     hostname = connection_info.get('hostname')
     for item in blacklist:
         if item in hostname:
             return True
 
     return False
+
 
 def generate_report(title, log_url=None, trace=None, connection_info={}):
     """Build our formatted GitHub issue string"""
@@ -314,8 +313,6 @@ def upload_log():
 
 def report_issue(title, trace=None, connection_info=None):
     """Report our issue to GitHub"""
-
-
     log_url = None
     try:
         log_url = upload_log()
@@ -330,6 +327,6 @@ def report_issue(title, trace=None, connection_info=None):
         report_url = upload_report(report)
         utils.log('Report URL: %s' % report_url)
         return report_url
-    except Exception as e:
+    except Exception:
         utils.log(traceback.format_exc())
         raise Exception('Failed to upload issue report')

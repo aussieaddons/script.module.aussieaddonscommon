@@ -12,7 +12,7 @@ import xbmcgui
 # This import is to deal with a python bug with strptime:
 #   ImportError: Failed to import _strptime because the import lockis
 #   held by another thread.
-import _strptime # noqa: F401
+import _strptime  # noqa: F401
 
 ADDON = xbmcaddon.Addon()
 
@@ -218,7 +218,6 @@ def log_kodi_platform_version():
     log("Kodi %s running on %s" % (version, platform))
 
 
-
 def check_country(connection_info, message=None):
     if not message:
         message = format_dialog_message('Issue report denied.')
@@ -236,7 +235,7 @@ def check_country(connection_info, message=None):
                            'is probably geo-blocked to Australia.' %
                            country_name)
             xbmcgui.Dialog().ok(*message)
-    
+
     if blacklisted_hostname:
         message.append('VPN/proxy detected that has been blocked by this '
                        'content provider.')
@@ -244,7 +243,7 @@ def check_country(connection_info, message=None):
 
     return valid_country and not blacklisted_hostname
 
-    
+
 def user_report():
     send_report('User initiated report', user_initiated=True)
 
