@@ -215,9 +215,10 @@ def blacklisted_hostname(connection_info):
         return False
 
     hostname = connection_info.get('hostname')
-    for item in blacklist:
-        if item in hostname:
-            return True
+    if hostname:
+        for item in blacklist:
+            if item in hostname:
+                return True
 
     return False
 
