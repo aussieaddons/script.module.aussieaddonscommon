@@ -218,7 +218,7 @@ def log_kodi_platform_version():
     log("Kodi %s running on %s" % (version, platform))
 
 
-def check_country(connection_info, message=None):
+def is_valid_country(connection_info, message=None):
     if not message:
         message = format_dialog_message('Issue report denied.')
 
@@ -235,13 +235,15 @@ def check_country(connection_info, message=None):
                            'is probably geo-blocked to Australia.' %
                            country_name)
             xbmcgui.Dialog().ok(*message)
+            return False
 
     if blacklisted_hostname:
         message.append('VPN/proxy detected that has been blocked by this '
                        'content provider.')
         xbmcgui.Dialog().ok(*message)
+        return False
 
-    return valid_country and not blacklisted_hostname
+    return True
 
 
 def user_report():
@@ -257,7 +259,7 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
             connection_info = issue_reporter.get_connection_info()
 
         if user_initiated:
-            if not check_country(connection_info):
+            if not is_valid_country(connection_info):
                 return
 
         # Show dialog spinner, and close afterwards
@@ -304,7 +306,7 @@ def handle_error(message):
 
     connection_info = issue_reporter.get_connection_info()
 
-    if not check_country(connection_info, message):
+    if not is_valid_country(connection_info, message):
         return
 
     is_reportable = issue_reporter.is_reportable(exc_type,
