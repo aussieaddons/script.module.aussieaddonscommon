@@ -46,7 +46,9 @@ class Session(requests.Session):
 
     def request(self, method, url, *args, **kwargs):
         """Send the request after generating the complete URL."""
-        utils.log("Performing {0} for {1}".format(method, url))
+        logging = kwargs.pop('logging', True)
+        if logging:
+            utils.log("Performing {0} for {1}".format(method, url))
         try:
             req = super(Session, self).request(method, url, *args, **kwargs)
             req.raise_for_status()
