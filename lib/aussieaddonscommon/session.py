@@ -43,10 +43,17 @@ class Session(requests.Session):
 
         # Always ignore SSL validation errors
         self.verify = False
-
-    def request(self, method, url, *args, **kwargs):
+    
+    def get(self, url, logging=True, **kwargs):
+        kwargs.setdefault('allow_redirects', True)
+        return self.request('GET', url, logging=logging, **kwargs)
+    
+    def post(self, url, logging=True, **kwargs):
+        kwargs.setdefault('allow_redirects', True)
+        return self.request('POST', url, logging=logging, **kwargs)
+    
+    def request(self, method, url, logging, *args, **kwargs):
         """Send the request after generating the complete URL."""
-        logging = kwargs.pop('logging', True)
         if logging:
             utils.log("Performing {0} for {1}".format(method, url))
         try:
