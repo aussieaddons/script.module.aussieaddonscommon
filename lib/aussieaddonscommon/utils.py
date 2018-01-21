@@ -17,7 +17,7 @@ import _strptime  # noqa: F401
 ADDON = xbmcaddon.Addon()
 
 # Used for fetching latest version information about the add-on
-GITHUB_ORG = 'xbmc-catchuptv-au'
+GITHUB_ORG = 'aussieaddons'
 
 # HTML code escape
 PATTERN = re.compile("&(\w+?);")
