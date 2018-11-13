@@ -208,8 +208,15 @@ def blacklisted_hostname(connection_info):
     Some VPNs/proxys are known to content providers and will return 403
     responses. Blacklisting these to avoid issues reports caused by this.
     """
-    org_blacklist = ['highwinds', 'softlayer', 'micfo']
-    hostname_blacklist = ['ipvanish', 'zoogvpn', 'sl-reverse']
+    org_blacklist = ['highwinds',
+                     'softlayer',
+                     'micfo',
+                     'total server solutions',  # PIA
+                     'host universal pty ltd']  # NordVPN
+
+    hostname_blacklist = ['ipvanish',
+                          'zoogvpn',
+                          'sl-reverse']
 
     if not connection_info:
         return False
