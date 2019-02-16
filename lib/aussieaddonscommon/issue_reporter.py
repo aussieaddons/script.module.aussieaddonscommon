@@ -157,7 +157,9 @@ def is_reportable(exc_type, exc_value, exc_traceback):
     """
 
     # AttributeError: global name 'foo' is not defined
-    error = '%s: %s' % (exc_type.__name__, ', '.join(exc_value.args))
+    error = '%s: %s' % (
+        exc_type.__name__, ', '.join(
+            utils.ensure_ascii(x) for x in exc_value.args))
 
     # Don't show any dialogs when user cancels
     if exc_type.__name__ == 'SystemExit':
