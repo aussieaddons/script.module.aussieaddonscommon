@@ -271,8 +271,10 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
         content.append("\n[Full log](%s)" % log_url)
 
     short_id = utils.get_addon_id().split('.')[-1]
+    title = '[%s] %s' % (short_id, title)
+    # Github throws HTTP 422 if title is too long
     report = {
-        'title': '[%s] %s' % (short_id, title),
+        'title': title[:255],
         'body': '\n'.join(content)
     }
 
@@ -284,7 +286,8 @@ def upload_report(report):
         response = urllib2.urlopen(make_request(ISSUE_API_URL),
                                    json.dumps(report))
     except urllib2.HTTPError as e:
-        utils.log("Failed to report issue: HTTPError %s" % e.code)
+        utils.log("Failed to report issue: HTTPError %s\n %s" % (
+            e.code, e.read()))
         return False
     except urllib2.URLError as e:
         utils.log("Failed to report issue: URLError %s" % e.reason)
