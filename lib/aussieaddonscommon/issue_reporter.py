@@ -228,7 +228,8 @@ def blacklisted_hostname(connection_info):
                      'softlayer',
                      'micfo',
                      'total server solutions',  # PIA
-                     'host universal pty ltd']  # NordVPN
+                     'host universal pty ltd',  # NordVPN
+                     'AS45671']  # serversaustralia.com.au
 
     hostname_blacklist = ['ipvanish',
                           'zoogvpn',
