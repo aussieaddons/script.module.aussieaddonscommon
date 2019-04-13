@@ -291,6 +291,10 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
                 log('Cancelled user report')
                 return
 
+        # Show dialog spinner, and close afterwards
+        dialog_progress.create('Uploading issue to GitHub...')
+        dialog_created = True
+
         if not issue_reporter.is_supported_addon():
             xbmcgui.Dialog().ok('{0} v{1}'.format(
                 get_addon_name(), get_addon_version()),
@@ -298,9 +302,6 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
             log('Add-on not supported, aborting issue report.')
             return
         
-        # Show dialog spinner, and close afterwards
-        dialog_progress.create('Uploading issue to GitHub...')
-        dialog_created = True
         report_url = issue_reporter.report_issue(title, trace, connection_info)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
