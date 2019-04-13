@@ -273,6 +273,8 @@ def user_report():
 
 def send_report(title, trace=None, connection_info=None, user_initiated=False):
     try:
+        dialog_progress = xbmcgui.DialogProgress()
+        dialog_created = False
         import issue_reporter
         log("Reporting issue to GitHub")
 
@@ -286,6 +288,7 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
                 get_addon_name(), get_addon_version()),
                     'Please confirm you would like to submit an issue report '
                     'and upload your logfile to Github. '):
+                log('Cancelled user report')
                 return
 
         if not issue_reporter.is_supported_addon():
@@ -296,7 +299,8 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
             return
         
         # Show dialog spinner, and close afterwards
-        xbmc.executebuiltin("ActivateWindow(busydialog)")
+        dialog_progress.create('Uploading issue to GitHub...')
+        dialog_created = True
         report_url = issue_reporter.report_issue(title, trace, connection_info)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
@@ -309,7 +313,8 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
         traceback.print_exc()
         log('Failed to send report')
     finally:
-        xbmc.executebuiltin("Dialog.Close(busydialog)")
+        if dialog_created:
+            dialog_progress.close()
 
 
 def handle_error(message):
