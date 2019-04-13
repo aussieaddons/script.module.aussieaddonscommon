@@ -181,7 +181,7 @@ def get_platform():
         "Android",
         "Linux.RaspberryPi",
         "Linux",
-        "XBOX",
+        "UWP",
         "Windows",
         "ATV2",
         "IOS",
@@ -267,12 +267,14 @@ def user_report():
         send_report('User initiated report', user_initiated=True)
     else:
         dialog_message(['Debug logging not enabled. '
-                        'Please enable debug logging,  restart Kodi, '
+                        'Please enable debug logging, restart Kodi, '
                         'recreate the issue and try again.'])
 
 
 def send_report(title, trace=None, connection_info=None, user_initiated=False):
     try:
+        dialog_progress = xbmcgui.DialogProgress()
+        dialog_created = False
         import issue_reporter
         log("Reporting issue to GitHub")
 
@@ -286,9 +288,20 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
                 get_addon_name(), get_addon_version()),
                     'Please confirm you would like to submit an issue report '
                     'and upload your logfile to Github. '):
+                log('Cancelled user report')
                 return
+
         # Show dialog spinner, and close afterwards
-        xbmc.executebuiltin("ActivateWindow(busydialog)")
+        dialog_progress.create('Uploading issue to GitHub...')
+        dialog_created = True
+
+        if not issue_reporter.is_supported_addon():
+            xbmcgui.Dialog().ok('{0} v{1}'.format(
+                get_addon_name(), get_addon_version()),
+                'This add-on is no longer supported by Aussie Add-ons.')
+            log('Add-on not supported, aborting issue report.')
+            return
+        
         report_url = issue_reporter.report_issue(title, trace, connection_info)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
@@ -301,7 +314,8 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
         traceback.print_exc()
         log('Failed to send report')
     finally:
-        xbmc.executebuiltin("Dialog.Close(busydialog)")
+        if dialog_created:
+            dialog_progress.close()
 
 
 def handle_error(message):

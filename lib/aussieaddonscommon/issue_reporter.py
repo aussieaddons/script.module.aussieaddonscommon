@@ -15,6 +15,7 @@ GITHUB_API_URL = 'https://api.github.com/repos/aussieaddons/issue-reports'
 GITHUB_API_TOKEN = 'ab181e16a94e918bf81' + '7d86778599926126e0e30'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
+ORG_API_URL= 'https://api.github.com/orgs/aussieaddons/repos'
 
 
 # Filter out username and passwords from log files
@@ -145,6 +146,19 @@ def save_last_error_report(error):
         utils.log("Error writing error report file")
 
 
+def get_org_repos():
+    data = json.loads(urllib2.urlopen(ORG_API_URL).read())
+    listing = []
+    for repo in data:
+        listing.append(repo.get('name'))
+    return listing
+
+
+def is_supported_addon():
+    if utils.get_addon_id() in get_org_repos():
+        return True
+
+
 def is_reportable(exc_type, exc_value, exc_traceback):
     """Can we send an error report
 
@@ -214,7 +228,8 @@ def blacklisted_hostname(connection_info):
                      'softlayer',
                      'micfo',
                      'total server solutions',  # PIA
-                     'host universal pty ltd']  # NordVPN
+                     'host universal pty ltd',  # NordVPN
+                     'AS45671']  # serversaustralia.com.au
 
     hostname_blacklist = ['ipvanish',
                           'zoogvpn',
