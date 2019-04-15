@@ -276,6 +276,7 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
         "**Country:** %s" % connection_info.get('country', 'N/A'),
         "**ISP:** %s" % connection_info.get('org', 'N/A'),
         "**Operating System:** %s %s" % (sys.platform, os_string),
+        "**Platform:** %s" % utils.get_platform(),
         "**Python Path:**\n```\n%s\n```" % '\n'.join(sys.path),
     ]
 
