@@ -88,7 +88,7 @@ def ensure_ascii(s):
     if not isinstance(s, unicode):
         s = str(s)
         s = s.decode("utf-8")
-    return unicodedata.normalize('NFC', s).encode('ascii', 'ignore')
+    return unicodedata.normalize('NFD', s).encode('ascii', 'ignore')
 
 
 def get_file_dir():
@@ -264,14 +264,25 @@ def is_debug():
 
 def user_report():
     if is_debug():
-        send_report('User initiated report', user_initiated=True)
+        import issue_reporter
+        connection_info = issue_reporter.get_connection_info()
+
+        if not is_valid_country(connection_info):
+            return
+        if not xbmcgui.Dialog().yesno('{0} v{1}'.format(
+            get_addon_name(), get_addon_version()),
+                'Please confirm you would like to submit an issue report '
+                'and upload your logfile to Github. '):
+            log('Cancelled user report')
+            return
+        send_report('User initiated report', connection_info=connection_info)
     else:
         dialog_message(['Debug logging not enabled. '
                         'Please enable debug logging, restart Kodi, '
                         'recreate the issue and try again.'])
 
 
-def send_report(title, trace=None, connection_info=None, user_initiated=False):
+def send_report(title, trace=None, connection_info=None):
     try:
         dialog_progress = xbmcgui.DialogProgress()
         dialog_created = False
@@ -280,16 +291,6 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
 
         if not connection_info:
             connection_info = issue_reporter.get_connection_info()
-
-        if user_initiated:
-            if not is_valid_country(connection_info):
-                return
-            if not xbmcgui.Dialog().yesno('{0} v{1}'.format(
-                get_addon_name(), get_addon_version()),
-                    'Please confirm you would like to submit an issue report '
-                    'and upload your logfile to Github. '):
-                log('Cancelled user report')
-                return
 
         # Show dialog spinner, and close afterwards
         dialog_progress.create('Uploading issue to GitHub...')
