@@ -1,0 +1,6 @@
+mock
+testtools
+pytest
+requests
+responses
+git+https://github.com/glennguy/Kodistubs.git@python3#egg=Kodistubs
