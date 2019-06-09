@@ -4,7 +4,7 @@ import mock
 import testtools
 import xbmc
 
-import fakes
+from tests.unit import fakes
 from aussieaddonscommon import utils
 
 utils.ADDON = fakes.FakeAddon()

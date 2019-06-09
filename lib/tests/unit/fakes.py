@@ -1,5 +1,6 @@
 # This Python file uses the following encoding: utf-8
 
+# utils.py
 class FakeAddon(object):
     def __init__(self, id='test.addon'):
         self.id = id
@@ -18,19 +19,19 @@ class FakeAddon(object):
     def getAddonInfo(self, key):
         return getattr(self, key)
 
+#  fakes for tracebacks
+#  https://stackoverflow.com/questions/19248784/faking-a-traceback-in-python
 
 class FakeCode(object):
     def __init__(self, co_filename, co_name):
         self.co_filename = co_filename
         self.co_name = co_name
 
-#  fakes for tracebacks
-#  https://stackoverflow.com/questions/19248784/faking-a-traceback-in-python
+
 class FakeFrame(object):
     def __init__(self, f_code, f_globals):
         self.f_code = f_code
         self.f_globals = f_globals
-
 
 class FakeTraceback(object):
     def __init__(self, frames, line_nums):
@@ -64,16 +65,16 @@ class FakeException(Exception):
         self._tb = value
         return self
 
+
 code1 = FakeCode("made_up_filename.py", "non_existent_function")
 code2 = FakeCode("another_non_existent_file.py", "another_non_existent_method")
 frame1 = FakeFrame(code1, {})
 frame2 = FakeFrame(code2, {})
 EXC_VALUE = FakeException('Another AFL 503 error')
-TB = FakeTraceback([frame1, frame2], [1,3])
+TB = FakeTraceback([frame1, frame2], [1, 3])
 EXC_FORMATTED_SUMMARY = "made_up_filename.py (1) - FakeException: " \
                         "Another AFL 503 error"
 EXC_VALUE_FORMATTED = 'FakeException: Another AFL 503 error'
-
 
 PLUGIN_URL_DICT = {
     'category': 'channel/abc1',
@@ -86,8 +87,7 @@ PLUGIN_URL_STRING = "?category=channel%2Fabc1&episode_count=18&series_url" \
 
 UNICODE_STRING_WITH_ACCENTS = u"Klüft skräms inför på fédéral électoral große"
 
-
-EXC_INFO = (TypeError, )
+EXC_INFO = (TypeError,)
 
 BUILD_VERSION = '18.2 Git:20190422-f2643566d0'
 
@@ -140,152 +140,121 @@ INVALID_CONNECTION_INFO = [
     }
 ]
 
-# Some systems we support
-SYSTEMS = [
-    # Linux
-    {
-        'system': 'Linux',
-        'platforms': ['System.Platform.Linux'],
-        'machine': 'x86_64',
-        'expected_system': 'Linux',
-        'expected_arch': 'x64',
-    },
-    # Generic Windows
-    {
-        'system': 'Windows',
-        'platforms': ['System.Platform.Windows'],
-        'machine': 'AMD64',
-        'arch': '32bit',
-        'expected_system': 'Windows',
-        'expected_arch': 'x86',
-    },
-    # Generic Mac OS X
-    {
-        'system': 'Darwin',
-        'platforms': ['System.Platform.OSX'],
-        'machine': 'x86_64',
-        'expected_system': 'Darwin',
-        'expected_arch': 'x64',
-    },
-    # Raspberry Pi
-    {
-        'system': 'Linux',
-        'platforms': ['System.Platform.Linux.RaspberryPi',
-                      'System.Platform.Linux'],
-        'machine': 'armv7l',
-        'expected_system': 'Linux',
-        'expected_arch': 'arm',
-    },
-    # Nexus Player/MiBox
-    {
-        'system': 'Linux',
-        'platforms': ['System.Platform.Android',
-                      'System.Platform.Linux'],
-        'machine': 'arm',
-        'expected_system': 'Android',
-        'expected_arch': 'arm',
-    },
-    # Windows (UWP)
-    {
-        'system': 'Windows',
-        'platforms': ['System.Platform.Windows',
-                      'System.Platform.UWP'],
-        'machine': '',
-        'arch': '64bit',
-        'expected_system': 'UWP',
-        'expected_arch': 'x64',
-    },
-    # Xbox One
-    {
-        'system': 'Windows',
-        'platforms': ['System.Platform.Windows',
-                      'System.Platform.UWP'],
-        'machine': '',
-        'arch': '64bit',
-        'expected_system': 'UWP',
-        'expected_arch': 'x64',
-    },
-]
+# issue_reporter.py
 
-
-ARCHES = [
-    ('aarch64', 'aarch64'),
-    ('aarch64_be', 'aarch64'),
-    ('arm64', 'aarch64'),
-    ('arm', 'arm'),
-    ('armv7l', 'arm'),
-    ('armv8', 'aarch64'),
-    ('AMD64', 'x64'),
-    ('x86_64', 'x64'),
-    ('x86', 'x86'),
-    ('i386', 'x86'),
-    ('i686', 'x86'),
-]
-
-KODI_BUILDS = [
-    {
-        'build': '13.2 Git:Unknown',
-        'version': '13.2',
-        'major_version': 13,
-        'build_name': 'Gotham',
-        'build_date': None,
-    },
-    {
-        'build': '17.6 Git:20180213-nogitfound',
-        'version': '17.6',
-        'major_version': 17,
-        'build_name': 'Krypton',
-        'build_date': '20180213',
-    },
-    {
-        'build': '17.6 Git:20171119-ced5097',
-        'version': '17.6',
-        'major_version': 17,
-        'build_name': 'Krypton',
-        'build_date': '20171119',
-    },
-    {
-        'build': '18.0-ALPHA1 Git:20180225-02cb21ec7d',
-        'version': '18.0',
-        'major_version': 18,
-        'build_name': 'Leia',
-        'build_date': '20180225',
-    },
-]
-
-
-# Expected output from calling Addons.GetAddonDetails for IA if not installed
-IA_NOT_AVAILABLE = {
-    'id': 1,
-    'jsonrpc': '2.0',
-    'error': {
-        'message': 'Invalid params.',
-        'code': -32602
-    }
+GITHUB_HEADERS = {
+    "Authorization": "token abc123",
+    "Content-Type": "application/json",
 }
 
-IA_ENABLED = {
-    'id': 1,
-    'jsonrpc': u'2.0',
-    'result': {
-        'addon': {
-            'addonid': 'inputstream.adaptive',
-            'enabled': True,
-            'type': 'kodi.inputstream'
+KODI_LOG = """
+NOTICE: Using Release Kodi x64 build
+Accessing https://user123:password1@example.com
+<user>user123</user>
+<pass>password1</pass>
+"""
+
+KODI_LOG_FILTERED = """
+NOTICE: Using Release Kodi x64 build
+Accessing https://[FILTERED_USER]:[FILTERED_PASSWORD]@example.com
+<user>[FILTERED_USER]</user>
+<pass>[FILTERED_PASSWORD]</pass>
+"""
+
+GITHUB_TAGS = [
+    {
+        u'commit': {
+            u'url':
+                u'https://api.github.com/repos/aussieaddons/plugin.video'
+                u'.abc_iview/commits/7686d42e4d877776bbbf2501d01dec7365071533',
+            u'sha':
+                u'7686d42e4d877776bbbf2501d01dec7365071533'},
+        u'zipball_url':
+            u'https://api.github.com/repos/aussieaddons/plugin.video'
+            u'.abc_iview/zipball/v1.8.5',
+        u'tarball_url':
+            u'https://api.github.com/repos/aussieaddons/plugin.video'
+            u'.abc_iview/tarball/v1.8.5',
+        u'name': u'v1.8.5',
+        u'node_id': u'MDM6UmVmNDMwOTMxNDp2MS44LjU='}, {
+        u'commit': {
+            u'url':
+                u'https://api.github.com/repos/aussieaddons/plugin.video'
+                u'.abc_iview/commits/01b9f3852c78b7d64eabb91c8872090e3dd9200c',
+            u'sha':
+                u'01b9f3852c78b7d64eabb91c8872090e3dd9200c'},
+        u'zipball_url':
+            u'https://api.github.com/repos/aussieaddons/plugin.video'
+            u'.abc_iview/zipball/v1.8.4',
+        u'tarball_url':
+            u'https://api.github.com/repos/aussieaddons/plugin.video'
+            u'.abc_iview/tarball/v1.8.4',
+        u'name': u'v1.8.4',
+        u'node_id': u'MDM6UmVmNDMwOTMxNDp2MS44LjQ='
+    }
+]
+
+GITHUB_VERSIONS = [
+    '1.8.5',
+    '1.8.4'
+]
+
+GITHUB_REPOS_RAW = [
+    {
+        u'description': u'Kodi add-on for AFL Video',
+        u'name': u'plugin.video.afl-video',
+        u'language': u'Python'
+    },
+    {
+        u'description': u'Aussie Add-ons repository for Kodi',
+        u'name': u'repo',
+        u'language': u'Python'
+    },
+    {
+        u'description': u'ABC iView add-on for Kodi',
+        u'name': u'plugin.video.abc_iview',
+        u'language': u'Python'
+    },
+    {
+        u'description': u'Tools for XBMC Addon management',
+        u'name': u'tools',
+        u'language': u'Python'
+    },
+    {
+        u'description': u'ABC News 24 Live Stream Plugin for XBMC',
+        u'name': u'plugin.video.live.au.abc_news24',
+        u'language': u'Python'
+    },
+    {
+        u'description': u'GitHub Issue Reporter Module for XBMC Addons',
+        u'name': u'script.module.githubissuereporter',
+        u'language': u'Python'
+    }
+]
+
+GITHUB_REPOS = [
+    u'plugin.video.afl-video', u'repo', u'plugin.video.abc_iview', u'tools',
+    u'plugin.video.live.au.abc_news24', u'script.module.githubissuereporter']
+
+UNAME = ('Windows', 'Home-Office', '10', '10.0.17763', 'AMD64',
+         'AMD64 Family 23 Model 1 Stepping 1, AuthenticAMD')
+
+REPORT = {
+    'body': u'*Automatic bug report from end-user.*\n\n## '
+            u'Environment\n\n**Add-on Name:** Test Add-on\n**Add-on ID:** '
+            u'test.addon\n**Add-on Version:** 0.0.1\n**Add-on URL:** '
+            u'?action=sendreport\n**Kodi Version:** 18.2\n**Python '
+            u'Version:** 2.7.16\n**IP Address:** '
+            u'123.234.56.78\n**Hostname:** '
+            u'123-234-56-78.dyn.iinet.net.au\n**Country:** AU\n**ISP:** '
+            u'AS4739 Internode Pty Ltd\n**Operating System:** win32  ('
+            u'Windows 10 AMD64)\n**Platform:** Windows\n**Python Path:**\n```\n\n```',
+    'title': '[addon] Foo'}
+
+LOG_DATA = {
+    "files": {
+        "kodi.log": {
+            "content": KODI_LOG_FILTERED
         }
     }
-}
-
-TRANS_PATH_ARGS = [
-    "addon.getSetting('DECRYPTERPATH')",
-    'special://xbmcbinaddons/inputstream.adaptive',
-    'special://home/'
-]
-
-TRANSLATED_PATHS = {
-    'Linux': ['/storage/.kodi/cdm',
-              '/storage/.kodi/addons/inputstream.adaptive'],
-    'Windows': ['C:/Users/user/AppData/Roaming/Kodi/cdm',
-                'C:/Program Files (x86)/Kodi/addons/inputstream.adaptive'],
-    'Darwin': ['/Users/User/Library/Application Support/Kodi/cdm/']
 }

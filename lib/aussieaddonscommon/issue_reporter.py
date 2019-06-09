@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import re
 import sys
 import traceback
@@ -257,7 +258,7 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
     """Build our formatted GitHub issue string"""
     try:
         # os.uname() is not available on Windows
-        uname = os.uname()
+        uname = platform.uname()
         os_string = ' (%s %s %s)' % (uname[0], uname[2], uname[4])
     except AttributeError:
         os_string = ''
