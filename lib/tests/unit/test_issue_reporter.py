@@ -1,13 +1,14 @@
 import io
 import json
-import urllib2
 
 import mock
 import six
 import testtools
+from future.moves.urllib.error import HTTPError, URLError
+from future.moves.urllib.request import Request
 
-from tests.unit import fakes
 from aussieaddonscommon import issue_reporter
+from tests.unit import fakes
 
 issue_reporter.GITHUB_API_TOKEN = 'abc123'
 
@@ -18,13 +19,13 @@ class IssueReporterTests(testtools.TestCase):
         url = 'https://foo.bar'
         observed = issue_reporter.make_request(url)
         self.assertEqual(
-            urllib2.Request(url, headers=fakes.GITHUB_HEADERS).headers,
+            Request(url, headers=fakes.GITHUB_HEADERS).headers,
             observed.headers)
         self.assertEqual(
-            urllib2.Request(url, headers=fakes.GITHUB_HEADERS).get_full_url(),
+            Request(url, headers=fakes.GITHUB_HEADERS).get_full_url(),
             observed.get_full_url())
 
-    @mock.patch('urllib2.urlopen')
+    @mock.patch('aussieaddonscommon.issue_reporter.urlopen')
     def test_get_connection_info(self, mock_urlopen):
         mock_urlopen.return_value = io.StringIO(
             six.text_type(json.dumps({'Foo': 'Bar'})))
@@ -83,7 +84,7 @@ class IssueReporterTests(testtools.TestCase):
             handle = mock_open()
             handle.write.assert_any_call(fakes.KODI_LOG)
 
-    @mock.patch('urllib2.urlopen')
+    @mock.patch('aussieaddonscommon.issue_reporter.urlopen')
     def test_get_org_repos(self, mock_urlopen):
         mock_urlopen.return_value = io.StringIO(
             six.text_type(json.dumps(fakes.GITHUB_REPOS_RAW)))
@@ -135,32 +136,35 @@ class IssueReporterTests(testtools.TestCase):
         mock_get_platform.return_value = 'Windows'
         mock_sys_path.return_value = r'C:\Users\user\foo'
         with mock.patch('sys.argv', ['foo', 'bar', '?action=sendreport']):
-            observed = issue_reporter.generate_report('Foo', connection_info=
-            fakes.VALID_CONNECTION_INFO[0])
+            observed = issue_reporter.generate_report(
+                'Foo', connection_info=fakes.VALID_CONNECTION_INFO[0])
         self.assertEqual(fakes.REPORT, observed)
 
     def test_upload_report(self):
-        with mock.patch('urllib2.urlopen') as mock_urlopen:
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.urlopen') as mock_urlopen:
             mock_urlopen.return_value = io.StringIO(
                 six.text_type(json.dumps({'html_url': 'http://foo.bar'})))
             observed = issue_reporter.upload_report(fakes.REPORT)
             self.assertEqual('http://foo.bar', observed)
 
-        with mock.patch('urllib2.urlopen') as mock_urlopen:
-            mock_urlopen.side_effect = urllib2.URLError('invalid url')
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = URLError('invalid url')
             with mock.patch('aussieaddonscommon.utils.log') as mock_log:
                 issue_reporter.upload_report(fakes.REPORT)
-                self.assertRaises(urllib2.URLError, urllib2.urlopen)
+                self.assertRaises(URLError, issue_reporter.urlopen)
                 mock_log.assert_called_once_with(
                     'Failed to report issue: URLError invalid url')
 
-        with mock.patch('urllib2.urlopen') as mock_urlopen:
-            mock_urlopen.side_effect = urllib2.HTTPError(
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = HTTPError(
                 'http://foo.bar', '404', 'Not found', {},
                 io.StringIO(six.text_type('Not Found')))
             with mock.patch('aussieaddonscommon.utils.log') as mock_log:
                 issue_reporter.upload_report(fakes.REPORT)
-                self.assertRaises(urllib2.HTTPError, urllib2.urlopen)
+                self.assertRaises(HTTPError, issue_reporter.urlopen)
                 mock_log.assert_called_once_with(
                     'Failed to report issue: HTTPError 404\n Not Found')
 
@@ -168,9 +172,11 @@ class IssueReporterTests(testtools.TestCase):
     @mock.patch('aussieaddonscommon.issue_reporter.get_kodi_log')
     def test_upload_log(self, mock_get_log, mock_make_request):
         mock_get_log.return_value = fakes.KODI_LOG_FILTERED
-        make_request_obj = issue_reporter.make_request(issue_reporter.GIST_API_URL)
+        make_request_obj = issue_reporter.make_request(
+            issue_reporter.GIST_API_URL)
         mock_make_request.return_value = make_request_obj
-        with mock.patch('urllib2.urlopen') as mock_urlopen:
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.urlopen') as mock_urlopen:
             mock_urlopen.return_value = io.StringIO(
                 six.text_type(json.dumps({'html_url': 'http://foo.bar'})))
             observed = issue_reporter.upload_log()
@@ -178,8 +184,9 @@ class IssueReporterTests(testtools.TestCase):
                                                  json.dumps(fakes.LOG_DATA))
             self.assertEqual('http://foo.bar', observed)
 
-        with mock.patch('urllib2.urlopen') as mock_urlopen:
-            mock_urlopen.side_effect = urllib2.HTTPError(
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = HTTPError(
                 'http://foo.bar', '404', 'Not found', {},
                 io.StringIO(six.text_type('Not Found')))
             with mock.patch('aussieaddonscommon.utils.log') as mock_log:
@@ -187,7 +194,7 @@ class IssueReporterTests(testtools.TestCase):
                 mock_urlopen.assert_called_with(
                     issue_reporter.make_request(issue_reporter.GIST_API_URL),
                     json.dumps(fakes.LOG_DATA))
-                self.assertRaises(urllib2.HTTPError, urllib2.urlopen)
+                self.assertRaises(HTTPError, issue_reporter.urlopen)
                 mock_log.assert_called_with(
                     'Failed to save log: HTTPError 404')
 
@@ -196,15 +203,18 @@ class IssueReporterTests(testtools.TestCase):
     def test_report_issue(self, mock_upload_log, mock_generate_report):
         mock_upload_log.return_value = 'http://foo.bar/log'
         mock_generate_report.return_value = fakes.REPORT
-        with mock.patch('aussieaddonscommon.issue_reporter.upload_report') as mock_upload_report:
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.upload_report') as \
+                mock_upload_report:
             mock_upload_report.return_value = 'http://foo.bar/report'
             observed = issue_reporter.report_issue('Foo')
             self.assertEqual('http://foo.bar/report', observed)
-        with mock.patch('aussieaddonscommon.issue_reporter.upload_report') as mock_upload_report:
+        with mock.patch(
+                'aussieaddonscommon.issue_reporter.upload_report') as \
+                mock_upload_report:
             mock_upload_report.side_effect = Exception()
             try:
                 issue_reporter.report_issue('Foo')
                 raise Exception('Test failed to raise exception')
             except:
                 self.assertRaises(Exception, issue_reporter.report_issue)
-

@@ -4,7 +4,8 @@ import platform
 import re
 import sys
 import traceback
-import urllib2
+from future.moves.urllib.request import urlopen, Request
+from future.moves.urllib.error import HTTPError, URLError
 import xbmc
 
 from aussieaddonscommon import utils
@@ -29,7 +30,7 @@ LOG_FILTERS = (
 
 def make_request(url):
     """Make our JSON request to GitHub"""
-    return urllib2.Request(url, headers={
+    return Request(url, headers={
         "Authorization": "token %s" % GITHUB_API_TOKEN,
         "Content-Type": "application/json",
     })
@@ -43,7 +44,7 @@ def get_connection_info():
     """
     try:
         utils.log('Fetching connection information...')
-        result = urllib2.urlopen('http://ipinfo.io/json', timeout=5)
+        result = urlopen('http://ipinfo.io/json', timeout=5)
         return json.loads(result.read())
     except Exception:
         utils.log(traceback.format_exc())
@@ -81,7 +82,7 @@ def fetch_tags(github_repo):
     of git tags via the API
     """
     api_url = 'https://api.github.com/repos/%s/tags' % github_repo
-    return json.load(urllib2.urlopen(api_url))
+    return json.load(urlopen(api_url))
 
 
 def get_versions(github_repo):
@@ -148,7 +149,7 @@ def save_last_error_report(error):
 
 
 def get_org_repos():
-    data = json.loads(urllib2.urlopen(ORG_API_URL).read())
+    data = json.loads(urlopen(ORG_API_URL).read())
     listing = []
     for repo in data:
         listing.append(repo.get('name'))
@@ -300,13 +301,13 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
 
 def upload_report(report):
     try:
-        response = urllib2.urlopen(make_request(ISSUE_API_URL),
+        response = urlopen(make_request(ISSUE_API_URL),
                                    json.dumps(report))
-    except urllib2.HTTPError as e:
+    except HTTPError as e:
         utils.log("Failed to report issue: HTTPError %s\n %s" % (
             e.code, e.read()))
         return False
-    except urllib2.URLError as e:
+    except URLError as e:
         utils.log("Failed to report issue: URLError %s" % e.reason)
         return False
 
@@ -333,12 +334,12 @@ def upload_log():
                 }
             }
         }
-        response = urllib2.urlopen(make_request(GIST_API_URL),
+        response = urlopen(make_request(GIST_API_URL),
                                    json.dumps(data))
-    except urllib2.HTTPError as e:
+    except HTTPError as e:
         utils.log("Failed to save log: HTTPError %s" % e.code)
         return False
-    except urllib2.URLError as e:
+    except URLError as e:
         utils.log("Failed to save log: URLError %s" % e.reason)
         return False
     try:
