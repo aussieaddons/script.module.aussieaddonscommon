@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="script.module.aussieaddonscommon" name="Aussie Add-ons Common" provider-name="Aussie Add-ons" version="1.0.0">
+<addon id="script.module.aussieaddonscommon" name="Aussie Add-ons Common" provider-name="Aussie Add-ons" version="0.0.0">
   <requires>
     <import addon="xbmc.python" version="2.1.0" />
+    <import addon="script.module.future"/>
     <import addon="script.module.requests"/>
   </requires>
   <extension library="lib" point="xbmc.python.module" />
