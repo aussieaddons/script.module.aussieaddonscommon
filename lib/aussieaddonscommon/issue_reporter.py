@@ -4,22 +4,22 @@ import platform
 import re
 import sys
 import traceback
-from future.moves.urllib.request import urlopen, Request
-from future.moves.urllib.error import HTTPError, URLError
-import future.moves.builtins as builtins
-import xbmc
+from distutils.version import LooseVersion
 
 from aussieaddonscommon import utils
 
-from distutils.version import LooseVersion
+import future.moves.builtins as builtins
+from future.moves.urllib.error import HTTPError, URLError
+from future.moves.urllib.request import Request, urlopen
+
+import xbmc
 
 
 GITHUB_API_URL = 'https://api.github.com/repos/aussieaddons/issue-reports'
 GITHUB_API_TOKEN = 'ab181e16a94e918bf81' + '7d86778599926126e0e30'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
-ORG_API_URL= 'https://api.github.com/orgs/aussieaddons/repos'
-
+ORG_API_URL = 'https://api.github.com/orgs/aussieaddons/repos'
 
 # Filter out username and passwords from log files
 LOG_FILTERS = (
@@ -303,7 +303,7 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
 def upload_report(report):
     try:
         response = urlopen(make_request(ISSUE_API_URL),
-                                   json.dumps(report))
+                           json.dumps(report))
     except HTTPError as e:
         utils.log("Failed to report issue: HTTPError %s\n %s" % (
             e.code, e.read()))
@@ -336,7 +336,7 @@ def upload_log():
             }
         }
         response = urlopen(make_request(GIST_API_URL),
-                                   json.dumps(data))
+                           json.dumps(data))
     except HTTPError as e:
         utils.log("Failed to save log: HTTPError %s" % e.code)
         return False

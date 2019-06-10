@@ -1,11 +1,14 @@
 from __future__ import absolute_import, unicode_literals
+from future.utils import string_types
 import json
+
 try:
     import mock
 except ImportError:
     import unittest.mock as mock
 
 import testtools
+import traceback
 import xbmc
 
 from future.moves.urllib.parse import parse_qsl
@@ -52,7 +55,7 @@ class UtilsTests(testtools.TestCase):
         string = fakes.UNICODE_STRING_WITH_ACCENTS
         expected = 'Kluft skrams infor pa federal electoral groe'
         self.assertEqual(expected, utils.ensure_ascii(string))
-        self.assertIsInstance(utils.ensure_ascii(string), str)
+        self.assertIsInstance(utils.ensure_ascii(string), string_types)
 
     @mock.patch('os.mkdir')
     @mock.patch('xbmc.translatePath')
@@ -189,7 +192,9 @@ class UtilsTests(testtools.TestCase):
                           mock_save_last_report):
         mock_exc_info.return_value = (
             fakes.FakeException, fakes.EXC_VALUE, fakes.TB)
-        mock_traceback.return_value = fakes.TB
+        mock_traceback.return_value = ''.join(
+            traceback.format_exception(fakes.FakeException, fakes.EXC_VALUE,
+                                       fakes.TB))
         mock_format_dialog_error.return_value = ['Test Add-on v0.0.1 ERROR',
                                                  fakes.EXC_FORMATTED_SUMMARY]
         mock_connection_info.return_value = fakes.VALID_CONNECTION_INFO[0]
@@ -198,7 +203,9 @@ class UtilsTests(testtools.TestCase):
         mock_yesno_dialog.return_value = True
         utils.handle_error('Big error')
         mock_send_report.assert_called_once_with(
-            fakes.EXC_VALUE_FORMATTED, trace=fakes.TB,
+            fakes.EXC_VALUE_FORMATTED, trace=''.join(
+                traceback.format_exception(fakes.FakeException,
+                                           fakes.EXC_VALUE, fakes.TB)),
             connection_info=fakes.VALID_CONNECTION_INFO[0])
         mock_save_last_report.assert_called_once_with(
             fakes.EXC_VALUE_FORMATTED)
