@@ -6,6 +6,7 @@ import sys
 import traceback
 from future.moves.urllib.request import urlopen, Request
 from future.moves.urllib.error import HTTPError, URLError
+import future.moves.builtins as builtins
 import xbmc
 
 from aussieaddonscommon import utils
@@ -68,7 +69,7 @@ def get_kodi_log():
         return None
 
     utils.log("Reading log file from \"%s\"" % log_file_path)
-    with open(log_file_path, 'r') as f:
+    with builtins.open(log_file_path, 'r') as f:
         log_content = f.read()
     for pattern, repl in LOG_FILTERS:
         log_content = re.sub(pattern, repl, log_content)
@@ -91,7 +92,7 @@ def get_versions(github_repo):
     Assemble a list of versions from the tags and strip any leading 'v'
     """
     tags = fetch_tags(github_repo)
-    versions = map(lambda tag: tag['name'].lstrip('v'), tags)
+    versions = list(map(lambda tag: tag['name'].lstrip('v'), tags))
     return versions
 
 
@@ -126,7 +127,7 @@ def not_already_reported(error):
         if not os.path.isfile(rfile):
             return True
         else:
-            f = open(rfile, 'r')
+            f = builtins.open(rfile, 'r')
             report = f.read()
             if report != error:
                 return True
@@ -142,7 +143,7 @@ def save_last_error_report(error):
     """Save a copy of our last error report"""
     try:
         rfile = os.path.join(utils.get_file_dir(), 'last_report_error.txt')
-        with open(rfile, 'w') as f:
+        with builtins.open(rfile, 'w') as f:
             f.write(error)
     except Exception:
         utils.log("Error writing error report file")

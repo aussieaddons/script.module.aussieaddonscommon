@@ -1,8 +1,12 @@
 from __future__ import absolute_import, unicode_literals
+
 import io
 import json
 
-import mock
+try:
+    import mock
+except ImportError:
+    import unittest.mock as mock
 import testtools
 from future.moves.urllib.error import HTTPError, URLError
 from future.moves.urllib.request import Request
@@ -32,7 +36,8 @@ class IssueReporterTests(testtools.TestCase):
         observed = issue_reporter.get_connection_info()
         self.assertEqual({'Foo': 'Bar'}, observed)
 
-    @mock.patch('__builtin__.open', mock.mock_open(read_data=fakes.KODI_LOG))
+    @mock.patch('aussieaddonscommon.issue_reporter.builtins.open',
+                mock.mock_open(read_data=fakes.KODI_LOG))
     @mock.patch('os.path.isfile')
     def test_get_kodi_log(self, mock_isfile):
         mock_isfile.return_value = True
@@ -65,7 +70,8 @@ class IssueReporterTests(testtools.TestCase):
         self.assertIs(
             issue_reporter.is_not_latest_version(current, latest), False)
 
-    @mock.patch('__builtin__.open', mock.mock_open(read_data=fakes.KODI_LOG))
+    @mock.patch('aussieaddonscommon.issue_reporter.builtins.open',
+                mock.mock_open(read_data=fakes.KODI_LOG))
     @mock.patch('aussieaddonscommon.utils.get_file_dir')
     @mock.patch('os.path.isfile')
     def test_not_already_reported(self, mock_isfile, mock_get_file_dir):
@@ -79,7 +85,8 @@ class IssueReporterTests(testtools.TestCase):
     @mock.patch('aussieaddonscommon.utils.get_file_dir')
     def test_save_last_error_report(self, mock_get_file_dir):
         mock_get_file_dir.return_value = '/'
-        with mock.patch('__builtin__.open', mock.mock_open()) as mock_open:
+        with mock.patch('aussieaddonscommon.issue_reporter.builtins.open',
+                        mock.mock_open()) as mock_open:
             issue_reporter.save_last_error_report(fakes.KODI_LOG)
             handle = mock_open()
             handle.write.assert_any_call(fakes.KODI_LOG)
@@ -213,8 +220,4 @@ class IssueReporterTests(testtools.TestCase):
                 'aussieaddonscommon.issue_reporter.upload_report') as \
                 mock_upload_report:
             mock_upload_report.side_effect = Exception()
-            try:
-                issue_reporter.report_issue('Foo')
-                raise Exception('Test failed to raise exception')
-            except:
-                self.assertRaises(Exception, issue_reporter.report_issue)
+            self.assertRaises(Exception, issue_reporter.report_issue, 'Foo')

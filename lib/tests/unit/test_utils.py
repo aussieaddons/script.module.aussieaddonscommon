@@ -1,9 +1,14 @@
+from __future__ import absolute_import, unicode_literals
 import json
+try:
+    import mock
+except ImportError:
+    import unittest.mock as mock
 
-import mock
 import testtools
 import xbmc
 
+from future.moves.urllib.parse import parse_qsl
 from tests.unit import fakes
 from aussieaddonscommon import utils
 
@@ -41,13 +46,13 @@ class UtilsTests(testtools.TestCase):
 
     def test_make_url(self):
         url = fakes.PLUGIN_URL_DICT
-        expected = fakes.PLUGIN_URL_STRING.strip('?')
-        self.assertEqual(expected, utils.make_url(url))
+        self.assertEqual(url, dict(parse_qsl(utils.make_url(url))))
 
     def test_ensure_ascii(self):
         string = fakes.UNICODE_STRING_WITH_ACCENTS
         expected = 'Kluft skrams infor pa federal electoral groe'
         self.assertEqual(expected, utils.ensure_ascii(string))
+        self.assertIsInstance(utils.ensure_ascii(string), str)
 
     @mock.patch('os.mkdir')
     @mock.patch('xbmc.translatePath')

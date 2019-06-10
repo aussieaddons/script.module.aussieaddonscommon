@@ -1,4 +1,5 @@
-import htmlentitydefs
+from future.moves.html.entities import entitydefs
+from future.utils import iteritems, text_type
 import json
 import os
 import re
@@ -39,7 +40,7 @@ def get_addon_version():
     return ADDON.getAddonInfo('version')
 
 
-def descape_entity(m, defs=htmlentitydefs.entitydefs):
+def descape_entity(m, defs=entitydefs):
     """Translate one entity to its ISO Latin value"""
     try:
         return defs[m.group(1)]
@@ -71,7 +72,7 @@ def get_url(s):
 def make_url(d):
     """Build a URL suitable for a Kodi add-on from a dict"""
     pairs = []
-    for k, v in d.iteritems():
+    for k, v in iteritems(d):
         k = urllib.quote_plus(k)
         v = ensure_ascii(v)
         v = urllib.quote_plus(v)
@@ -85,7 +86,7 @@ def ensure_ascii(s):
     This is especially useful for Kodi menu items which will barf if given
     anything other than ascii
     """
-    if not isinstance(s, unicode):
+    if not isinstance(s, text_type):
         s = str(s)
         s = s.decode("utf-8")
     return unicodedata.normalize('NFD', s).encode('ascii', 'ignore')

@@ -1,8 +1,8 @@
 import requests
 import ssl
-import utils
+from aussieaddonscommon import utils
 
-from exceptions import AussieAddonsException
+from aussieaddonscommon.exceptions import AussieAddonsException
 
 from requests.adapters import HTTPAdapter
 from requests.exceptions import SSLError
