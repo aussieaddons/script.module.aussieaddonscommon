@@ -1,22 +1,25 @@
 import json
 import os
+import platform
 import re
 import sys
 import traceback
-import urllib2
-import xbmc
+from distutils.version import LooseVersion
 
 from aussieaddonscommon import utils
 
-from distutils.version import LooseVersion
+import future.moves.builtins as builtins
+from future.moves.urllib.error import HTTPError, URLError
+from future.moves.urllib.request import Request, urlopen
+
+import xbmc
 
 
 GITHUB_API_URL = 'https://api.github.com/repos/aussieaddons/issue-reports'
 GITHUB_API_TOKEN = 'ab181e16a94e918bf81' + '7d86778599926126e0e30'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
-ORG_API_URL= 'https://api.github.com/orgs/aussieaddons/repos'
-
+ORG_API_URL = 'https://api.github.com/orgs/aussieaddons/repos'
 
 # Filter out username and passwords from log files
 LOG_FILTERS = (
@@ -28,7 +31,7 @@ LOG_FILTERS = (
 
 def make_request(url):
     """Make our JSON request to GitHub"""
-    return urllib2.Request(url, headers={
+    return Request(url, headers={
         "Authorization": "token %s" % GITHUB_API_TOKEN,
         "Content-Type": "application/json",
     })
@@ -42,7 +45,7 @@ def get_connection_info():
     """
     try:
         utils.log('Fetching connection information...')
-        result = urllib2.urlopen('http://ipinfo.io/json', timeout=5)
+        result = urlopen('http://ipinfo.io/json', timeout=5)
         return json.loads(result.read())
     except Exception:
         utils.log(traceback.format_exc())
@@ -66,7 +69,7 @@ def get_kodi_log():
         return None
 
     utils.log("Reading log file from \"%s\"" % log_file_path)
-    with open(log_file_path, 'r') as f:
+    with builtins.open(log_file_path, 'r') as f:
         log_content = f.read()
     for pattern, repl in LOG_FILTERS:
         log_content = re.sub(pattern, repl, log_content)
@@ -80,7 +83,7 @@ def fetch_tags(github_repo):
     of git tags via the API
     """
     api_url = 'https://api.github.com/repos/%s/tags' % github_repo
-    return json.load(urllib2.urlopen(api_url))
+    return json.load(urlopen(api_url))
 
 
 def get_versions(github_repo):
@@ -89,7 +92,7 @@ def get_versions(github_repo):
     Assemble a list of versions from the tags and strip any leading 'v'
     """
     tags = fetch_tags(github_repo)
-    versions = map(lambda tag: tag['name'].lstrip('v'), tags)
+    versions = list(map(lambda tag: tag['name'].lstrip('v'), tags))
     return versions
 
 
@@ -124,7 +127,7 @@ def not_already_reported(error):
         if not os.path.isfile(rfile):
             return True
         else:
-            f = open(rfile, 'r')
+            f = builtins.open(rfile, 'r')
             report = f.read()
             if report != error:
                 return True
@@ -140,14 +143,14 @@ def save_last_error_report(error):
     """Save a copy of our last error report"""
     try:
         rfile = os.path.join(utils.get_file_dir(), 'last_report_error.txt')
-        with open(rfile, 'w') as f:
+        with builtins.open(rfile, 'w') as f:
             f.write(error)
     except Exception:
         utils.log("Error writing error report file")
 
 
 def get_org_repos():
-    data = json.loads(urllib2.urlopen(ORG_API_URL).read())
+    data = json.loads(urlopen(ORG_API_URL).read())
     listing = []
     for repo in data:
         listing.append(repo.get('name'))
@@ -257,7 +260,7 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
     """Build our formatted GitHub issue string"""
     try:
         # os.uname() is not available on Windows
-        uname = os.uname()
+        uname = platform.uname()
         os_string = ' (%s %s %s)' % (uname[0], uname[2], uname[4])
     except AttributeError:
         os_string = ''
@@ -299,13 +302,13 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
 
 def upload_report(report):
     try:
-        response = urllib2.urlopen(make_request(ISSUE_API_URL),
-                                   json.dumps(report))
-    except urllib2.HTTPError as e:
+        response = urlopen(make_request(ISSUE_API_URL),
+                           json.dumps(report))
+    except HTTPError as e:
         utils.log("Failed to report issue: HTTPError %s\n %s" % (
             e.code, e.read()))
         return False
-    except urllib2.URLError as e:
+    except URLError as e:
         utils.log("Failed to report issue: URLError %s" % e.reason)
         return False
 
@@ -332,12 +335,12 @@ def upload_log():
                 }
             }
         }
-        response = urllib2.urlopen(make_request(GIST_API_URL),
-                                   json.dumps(data))
-    except urllib2.HTTPError as e:
+        response = urlopen(make_request(GIST_API_URL),
+                           json.dumps(data))
+    except HTTPError as e:
         utils.log("Failed to save log: HTTPError %s" % e.code)
         return False
-    except urllib2.URLError as e:
+    except URLError as e:
         utils.log("Failed to save log: URLError %s" % e.reason)
         return False
     try:

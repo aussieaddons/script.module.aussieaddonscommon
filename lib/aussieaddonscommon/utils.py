@@ -1,45 +1,52 @@
-import htmlentitydefs
 import json
 import os
 import re
 import sys
 import traceback
 import unicodedata
-import urllib
-import xbmc
-import xbmcaddon
-import xbmcgui
 
 # This import is to deal with a python bug with strptime:
 #   ImportError: Failed to import _strptime because the import lockis
 #   held by another thread.
 import _strptime  # noqa: F401
 
-ADDON = xbmcaddon.Addon()
+from future.moves.html.entities import entitydefs
+from future.moves.urllib.parse import quote_plus, unquote_plus
+from future.utils import iteritems, string_types, text_type
+
+import xbmc
+
+import xbmcaddon
+
+import xbmcgui
 
 # Used for fetching latest version information about the add-on
 GITHUB_ORG = 'aussieaddons'
 
 # HTML code escape
-PATTERN = re.compile("&(\w+?);")
+PATTERN = re.compile(r"&(\w+?);")
+
+
+def get_addon():
+    return xbmcaddon.Addon()
 
 
 def get_addon_id():
     """Helper function for returning the version of the running add-on"""
-    return ADDON.getAddonInfo('id')
+    return get_addon().getAddonInfo('id')
 
 
 def get_addon_name():
     """Helper function for returning the version of the running add-on"""
-    return ADDON.getAddonInfo('name')
+    return get_addon().getAddonInfo('name')
 
 
 def get_addon_version():
     """Helper function for returning the version of the running add-on"""
-    return ADDON.getAddonInfo('version')
+    return get_addon().getAddonInfo('version')
 
 
-def descape_entity(m, defs=htmlentitydefs.entitydefs):
+def descape_entity(m, defs=entitydefs):
     """Translate one entity to its ISO Latin value"""
     try:
         return defs[m.group(1)]
@@ -63,7 +70,7 @@ def get_url(s):
             continue
         kv = pair.split("=", 1)
         k = kv[0]
-        v = urllib.unquote_plus(kv[1])
+        v = unquote_plus(kv[1])
         dict[k] = v
     return dict
 
@@ -71,10 +78,10 @@ def get_url(s):
 def make_url(d):
     """Build a URL suitable for a Kodi add-on from a dict"""
     pairs = []
-    for k, v in d.iteritems():
-        k = urllib.quote_plus(k)
+    for k, v in iteritems(d):
+        k = quote_plus(k)
         v = ensure_ascii(v)
-        v = urllib.quote_plus(v)
+        v = quote_plus(v)
         pairs.append("%s=%s" % (k, v))
     return "&".join(pairs)
 
@@ -85,10 +92,13 @@ def ensure_ascii(s):
     This is especially useful for Kodi menu items which will barf if given
     anything other than ascii
     """
-    if not isinstance(s, unicode):
+    if sys.version_info >= (3, 0):
+        return unicodedata.normalize('NFD', s).encode('ascii',
+                                                      'ignore').decode('utf-8')
+    if not isinstance(s, text_type):
         s = str(s)
         s = s.decode("utf-8")
-    return unicodedata.normalize('NFC', s).encode('ascii', 'ignore')
+    return unicodedata.normalize('NFD', s).encode('ascii', 'ignore')
 
 
 def get_file_dir():
@@ -118,7 +128,8 @@ def format_error_summary():
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
 
-    args = list(exc_value)
+    args = exc_value.args
+
     if exc_type == UnicodeEncodeError:
         args.pop(1)  # remove error data, likely to be very long xml
     return "%s (%d) - %s: %s" % (
@@ -150,7 +161,7 @@ def format_dialog_message(msg, title=None):
         content = ["%s v%s" % (get_addon_name(), get_addon_version())]
 
     # Force unicode to str
-    if type(msg) in [str, unicode]:
+    if isinstance(msg, string_types):
         msg = str(msg).split('\n')
 
     return content + msg
@@ -190,7 +201,7 @@ def get_platform():
     ]
 
     for platform in platforms:
-        if xbmc.getCondVisibility('System.Platform.'+platform):
+        if xbmc.getCondVisibility('System.Platform.' + platform):
             return platform
     return "Unknown"
 
@@ -227,14 +238,14 @@ def is_valid_country(connection_info, message=None):
     if not message:
         message = format_dialog_message('Issue report denied.')
 
-    import issue_reporter
+    from aussieaddonscommon import issue_reporter
     valid_country = issue_reporter.valid_country(connection_info)
     blacklisted_hostname = issue_reporter.blacklisted_hostname(connection_info)
 
     if not valid_country:
         country_code = connection_info.get('country')
         if country_code:
-            import countries
+            from aussieaddonscommon import countries
             country_name = countries.countries.get(country_code, country_code)
             message.append('Your country is reported as %s, but this service '
                            'is probably geo-blocked to Australia.' %
@@ -264,32 +275,33 @@ def is_debug():
 
 def user_report():
     if is_debug():
-        send_report('User initiated report', user_initiated=True)
+        from aussieaddonscommon import issue_reporter
+        connection_info = issue_reporter.get_connection_info()
+
+        if not is_valid_country(connection_info):
+            return
+        if not xbmcgui.Dialog().yesno('{0} v{1}'.format(
+                get_addon_name(), get_addon_version()),
+                'Please confirm you would like to submit an issue report '
+                'and upload your logfile to Github. '):
+            log('Cancelled user report')
+            return
+        send_report('User initiated report', connection_info=connection_info)
     else:
         dialog_message(['Debug logging not enabled. '
                         'Please enable debug logging, restart Kodi, '
                         'recreate the issue and try again.'])
 
 
-def send_report(title, trace=None, connection_info=None, user_initiated=False):
+def send_report(title, trace=None, connection_info=None):
     try:
         dialog_progress = xbmcgui.DialogProgress()
         dialog_created = False
-        import issue_reporter
+        from aussieaddonscommon import issue_reporter
         log("Reporting issue to GitHub")
 
         if not connection_info:
             connection_info = issue_reporter.get_connection_info()
-
-        if user_initiated:
-            if not is_valid_country(connection_info):
-                return
-            if not xbmcgui.Dialog().yesno('{0} v{1}'.format(
-                get_addon_name(), get_addon_version()),
-                    'Please confirm you would like to submit an issue report '
-                    'and upload your logfile to Github. '):
-                log('Cancelled user report')
-                return
 
         # Show dialog spinner, and close afterwards
         dialog_progress.create('Uploading issue to GitHub...')
@@ -301,7 +313,7 @@ def send_report(title, trace=None, connection_info=None, user_initiated=False):
                 'This add-on is no longer supported by Aussie Add-ons.')
             log('Add-on not supported, aborting issue report.')
             return
-        
+
         report_url = issue_reporter.report_issue(title, trace, connection_info)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
@@ -343,7 +355,7 @@ def handle_error(message):
 
     message = format_dialog_error(message)
 
-    import issue_reporter
+    from aussieaddonscommon import issue_reporter
 
     connection_info = issue_reporter.get_connection_info()
 

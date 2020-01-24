@@ -1,9 +1,9 @@
-import requests
 import ssl
-import utils
 
-from exceptions import AussieAddonsException
+from aussieaddonscommon import utils
+from aussieaddonscommon.exceptions import AussieAddonsException
 
+import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import SSLError
 from requests.packages.urllib3.poolmanager import PoolManager
