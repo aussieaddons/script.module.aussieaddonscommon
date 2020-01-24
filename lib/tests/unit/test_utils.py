@@ -15,8 +15,6 @@ from future.moves.urllib.parse import parse_qsl
 from tests.unit import fakes
 from aussieaddonscommon import utils
 
-utils.ADDON = fakes.FakeAddon()
-
 
 def get_xbmc_cond_visibility(cond):
     if cond == 'System.Platform.Linux':
@@ -27,14 +25,17 @@ def get_xbmc_cond_visibility(cond):
 
 class UtilsTests(testtools.TestCase):
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     def test_get_addon_id(self):
         addon_id = utils.get_addon_id()
         self.assertEqual('test.addon', addon_id)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     def test_get_addon_name(self):
         addon_name = utils.get_addon_name()
         self.assertEqual('Test Add-on', addon_name)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     def test_get_addon_version(self):
         addon_version = utils.get_addon_version()
         self.assertEqual('0.0.1', addon_version)
@@ -57,6 +58,7 @@ class UtilsTests(testtools.TestCase):
         self.assertEqual(expected, utils.ensure_ascii(string))
         self.assertIsInstance(utils.ensure_ascii(string), string_types)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('os.mkdir')
     @mock.patch('xbmc.translatePath')
     def test_get_file_dir(self, mock_translate_path, make_dir):
@@ -64,12 +66,14 @@ class UtilsTests(testtools.TestCase):
         observed = utils.get_file_dir().replace('\\', '/')
         self.assertEqual('/home/kodi/.kodi/temp/test.addon', observed)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('xbmc.log')
     def test_log(self, mock_log):
         utils.log('foo')
         mock_log.assert_called_once_with(
             '[Test Add-on v0.0.1] foo', level=xbmc.LOGNOTICE)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('sys.exc_info')
     def test_format_error_summary(self, mock_exc_info):
         mock_exc_info.return_value = (
@@ -77,6 +81,7 @@ class UtilsTests(testtools.TestCase):
         self.assertEqual(fakes.EXC_FORMATTED_SUMMARY,
                          utils.format_error_summary())
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('sys.exc_info')
     @mock.patch('traceback.print_exc')
     @mock.patch('xbmc.log')
@@ -93,6 +98,7 @@ class UtilsTests(testtools.TestCase):
         observed = utils.format_dialog_message('bar a b\nc', 'foo')
         self.assertEqual(['foo', 'bar a b', 'c'], observed)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('sys.exc_info')
     def test_format_dialog_error(self, mock_exc_info):
         mock_exc_info.return_value = (
@@ -128,6 +134,7 @@ class UtilsTests(testtools.TestCase):
         mock_info_label.return_value = fakes.BUILD_VERSION
         self.assertEqual(18, utils.get_kodi_major_version())
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('xbmc.log')
     @mock.patch('xbmc.getCondVisibility')
     @mock.patch('xbmc.getInfoLabel')
@@ -176,6 +183,7 @@ class UtilsTests(testtools.TestCase):
             'Foo', trace=None, connection_info=fakes.VALID_CONNECTION_INFO[0])
         self.assertEqual(fakes.ISSUE_URL, observed)
 
+    @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('aussieaddonscommon.issue_reporter.save_last_error_report')
     @mock.patch('aussieaddonscommon.utils.send_report')
     @mock.patch('xbmcgui.Dialog.yesno')
