@@ -21,7 +21,8 @@ import xbmcaddon
 import xbmcgui
 
 
-ADDON = xbmcaddon.Addon()
+def get_addon():
+    return xbmcaddon.Addon()
 
 # Used for fetching latest version information about the add-on
 GITHUB_ORG = 'aussieaddons'
@@ -32,17 +33,17 @@ PATTERN = re.compile(r"&(\w+?);")
 
 def get_addon_id():
     """Helper function for returning the version of the running add-on"""
-    return ADDON.getAddonInfo('id')
+    return get_addon().getAddonInfo('id')
 
 
 def get_addon_name():
     """Helper function for returning the version of the running add-on"""
-    return ADDON.getAddonInfo('name')
+    return get_addon().getAddonInfo('name')
 
 
 def get_addon_version():
     """Helper function for returning the version of the running add-on"""
-    return ADDON.getAddonInfo('version')
+    return get_addon().getAddonInfo('version')
 
 
 def descape_entity(m, defs=entitydefs):
