@@ -20,15 +20,15 @@ import xbmcaddon
 
 import xbmcgui
 
-
-def get_addon():
-    return xbmcaddon.Addon()
-
 # Used for fetching latest version information about the add-on
 GITHUB_ORG = 'aussieaddons'
 
 # HTML code escape
 PATTERN = re.compile(r"&(\w+?);")
+
+
+def get_addon():
+    return xbmcaddon.Addon()
 
 
 def get_addon_id():
