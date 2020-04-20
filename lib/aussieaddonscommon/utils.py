@@ -234,6 +234,19 @@ def log_kodi_platform_version():
     log("Kodi %s running on %s" % (version, platform))
 
 
+def is_valid_version():
+    """
+    let's filter out the versions of our addons packaged with 'Kodi Boxes'
+    that have high version numbers eg. 1001.1.3-2-g661cb6f
+    :return:
+    """
+    version = get_addon_version()
+    if version.split('.')[0] == '1001':
+        return False
+    else:
+        return True
+
+
 def is_valid_country(connection_info, message=None):
     if not message:
         message = format_dialog_message('Issue report denied.')
@@ -256,6 +269,11 @@ def is_valid_country(connection_info, message=None):
     if blacklisted_hostname:
         message.append('VPN/proxy detected that has been blocked by this '
                        'content provider.')
+        xbmcgui.Dialog().ok(*message)
+        return False
+
+    if not is_valid_version():
+        message.append('Invalid version number for issue report. ')
         xbmcgui.Dialog().ok(*message)
         return False
 

@@ -148,6 +148,16 @@ class UtilsTests(testtools.TestCase):
             '[Test Add-on v0.0.1] Kodi 18.2 running on Linux',
             level=xbmc.LOGNOTICE)
 
+    @mock.patch('aussieaddonscommon.utils.get_addon_version')
+    def test_is_valid_version(self, mock_version):
+        for ver in ['1.2.3', '0.0.1', '10.1.2-3~abcdef0']:
+            mock_version.return_value = ver
+            observed = utils.is_valid_version()
+            self.assertEqual(True, observed)
+        mock_version.return_value = '1001.1.3-2-abcdef0'
+        observed = utils.is_valid_version()
+        self.assertEqual(False, observed)
+
     def test_is_valid_country(self):
         for connection_info in fakes.VALID_CONNECTION_INFO:
             observed = utils.is_valid_country(connection_info)
