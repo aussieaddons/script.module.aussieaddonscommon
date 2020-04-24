@@ -211,7 +211,7 @@ def get_kodi_build():
     try:
         return xbmc.getInfoLabel("System.BuildVersion")
     except Exception:
-        return ''
+        return None
 
 
 def get_kodi_version():
@@ -227,10 +227,7 @@ def get_kodi_version():
 def get_kodi_major_version():
     """Return the major version number of Kodi"""
     version = get_kodi_version().split('.')[0]
-    if version:
-        return int(version)
-    else:
-        return 0
+    return int(version)
 
 
 def log_kodi_platform_version():
