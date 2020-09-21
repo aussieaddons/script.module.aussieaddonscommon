@@ -117,7 +117,7 @@ def get_file_dir():
 def log(s):
     """Logging helper"""
     xbmc.log("[%s v%s] %s" % (get_addon_name(), get_addon_version(),
-                              ensure_ascii(s)), level=xbmc.LOGNOTICE)
+                              ensure_ascii(s)), level=xbmc.LOGINFO)
 
 
 def format_error_summary():
