@@ -27,7 +27,7 @@ script:
   - >
     git clone https://github.com/aussieaddons/repo.git $TRAVIS_BUILD_DIR/.deploy-prod &&
     cd $TRAVIS_BUILD_DIR/.deploy-prod &&
-    ./manage_repo.py $TRAVIS_BUILD_DIR || travis_terminate 1
+    ./manage_repo.py $TRAVIS_BUILD_DIR -b leia matrix|| travis_terminate 1
   - git config credential.helper "store --file=.git/credentials"
   - echo "https://${GH_TOKEN}:@github.com" > .git/credentials
   - >
