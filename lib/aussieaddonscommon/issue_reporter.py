@@ -19,7 +19,7 @@ GITHUB_API_URL = 'https://api.github.com/repos/aussieaddons/issue-reports'
 GITHUB_API_TOKEN = 'ab181e16a94e918bf81' + '7d86778599926126e0e30'
 ISSUE_API_URL = GITHUB_API_URL + '/issues'
 GIST_API_URL = 'https://api.github.com/gists'
-ORG_API_URL = 'https://api.github.com/orgs/aussieaddons/repos'
+ORG_API_URL = 'https://api.github.com/orgs/aussieaddons/repos?per_page=100'
 
 # Filter out username and passwords from log files
 LOG_FILTERS = (
