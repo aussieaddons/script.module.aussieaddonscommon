@@ -36,7 +36,7 @@ class IssueReporterTests(testtools.TestCase):
         observed = issue_reporter.get_connection_info()
         self.assertEqual({'Foo': 'Bar'}, observed)
 
-    @mock.patch('aussieaddonscommon.issue_reporter.builtins.open',
+    @mock.patch('aussieaddonscommon.issue_reporter.io.open',
                 mock.mock_open(read_data=fakes.KODI_LOG))
     @mock.patch('os.path.isfile')
     def test_get_kodi_log(self, mock_isfile):
@@ -70,7 +70,7 @@ class IssueReporterTests(testtools.TestCase):
         self.assertIs(
             issue_reporter.is_not_latest_version(current, latest), False)
 
-    @mock.patch('aussieaddonscommon.issue_reporter.builtins.open',
+    @mock.patch('aussieaddonscommon.issue_reporter.io.open',
                 mock.mock_open(read_data=fakes.KODI_LOG))
     @mock.patch('aussieaddonscommon.utils.get_file_dir')
     @mock.patch('os.path.isfile')
@@ -85,11 +85,21 @@ class IssueReporterTests(testtools.TestCase):
     @mock.patch('aussieaddonscommon.utils.get_file_dir')
     def test_save_last_error_report(self, mock_get_file_dir):
         mock_get_file_dir.return_value = '/'
-        with mock.patch('aussieaddonscommon.issue_reporter.builtins.open',
+        with mock.patch('aussieaddonscommon.issue_reporter.io.open',
                         mock.mock_open()) as mock_open:
             issue_reporter.save_last_error_report(fakes.KODI_LOG)
             handle = mock_open()
             handle.write.assert_any_call(fakes.KODI_LOG)
+
+    @mock.patch('aussieaddonscommon.utils.get_file_dir')
+    def test_save_last_error_report_read_bytes(self, mock_get_file_dir):
+        mock_get_file_dir.return_value = '/'
+        report = io.BytesIO(fakes.KODI_LOG.encode('utf-8'))
+        with mock.patch('aussieaddonscommon.issue_reporter.io.open',
+                        mock.mock_open()) as mock_open:
+            issue_reporter.save_last_error_report(report.read())
+            handle = mock_open()
+            handle.write.assert_any_call(fakes.KODI_LOG.encode('utf-8'))
 
     @mock.patch('aussieaddonscommon.issue_reporter.urlopen')
     def test_get_org_repos(self, mock_urlopen):
@@ -175,6 +185,11 @@ class IssueReporterTests(testtools.TestCase):
                 mock_log.assert_called_once_with(
                     'Failed to report issue: HTTPError 404\n Not Found')
 
+    @mock.patch('aussieaddonscommon.issue_reporter.urlopen')
+    def test_upload_report_ensure_bytes(self, mock_urlopen):
+        issue_reporter.upload_report(fakes.REPORT)
+        self.assertIsInstance(mock_urlopen.call_args.args[1], bytes)
+
     @mock.patch('aussieaddonscommon.issue_reporter.make_request')
     @mock.patch('aussieaddonscommon.issue_reporter.get_kodi_log')
     def test_upload_log(self, mock_get_log, mock_make_request):
@@ -187,8 +202,8 @@ class IssueReporterTests(testtools.TestCase):
             mock_urlopen.return_value = io.StringIO(
                 json.dumps({'html_url': 'http://foo.bar'}, ensure_ascii=False))
             observed = issue_reporter.upload_log()
-            mock_urlopen.assert_called_once_with(make_request_obj,
-                                                 json.dumps(fakes.LOG_DATA))
+            mock_urlopen.assert_called_once_with(
+                make_request_obj, json.dumps(fakes.LOG_DATA).encode('utf-8'))
             self.assertEqual('http://foo.bar', observed)
 
         with mock.patch(
@@ -200,7 +215,7 @@ class IssueReporterTests(testtools.TestCase):
                 issue_reporter.upload_log()
                 mock_urlopen.assert_called_with(
                     issue_reporter.make_request(issue_reporter.GIST_API_URL),
-                    json.dumps(fakes.LOG_DATA))
+                    json.dumps(fakes.LOG_DATA).encode('utf-8'))
                 self.assertRaises(HTTPError, issue_reporter.urlopen)
                 mock_log.assert_called_with(
                     'Failed to save log: HTTPError 404')

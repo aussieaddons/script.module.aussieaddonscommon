@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import platform
@@ -8,7 +9,6 @@ from distutils.version import LooseVersion
 
 from aussieaddonscommon import utils
 
-import future.moves.builtins as builtins
 from future.moves.urllib.error import HTTPError, URLError
 from future.moves.urllib.request import Request, urlopen
 
@@ -69,7 +69,7 @@ def get_kodi_log():
         return None
 
     utils.log("Reading log file from \"%s\"" % log_file_path)
-    with builtins.open(log_file_path, 'r') as f:
+    with io.open(log_file_path, 'rb') as f:
         log_content = f.read()
     for pattern, repl in LOG_FILTERS:
         log_content = re.sub(pattern, repl, log_content)
@@ -127,7 +127,7 @@ def not_already_reported(error):
         if not os.path.isfile(rfile):
             return True
         else:
-            f = builtins.open(rfile, 'r')
+            f = io.open(rfile, 'rb')
             report = f.read()
             if report != error:
                 return True
@@ -143,7 +143,7 @@ def save_last_error_report(error):
     """Save a copy of our last error report"""
     try:
         rfile = os.path.join(utils.get_file_dir(), 'last_report_error.txt')
-        with builtins.open(rfile, 'w') as f:
+        with io.open(rfile, 'w') as f:
             f.write(error)
     except Exception:
         utils.log("Error writing error report file")
@@ -303,7 +303,7 @@ def generate_report(title, log_url=None, trace=None, connection_info={}):
 def upload_report(report):
     try:
         response = urlopen(make_request(ISSUE_API_URL),
-                           json.dumps(report))
+                           json.dumps(report).encode('utf-8'))
     except HTTPError as e:
         utils.log("Failed to report issue: HTTPError %s\n %s" % (
             e.code, e.read()))
@@ -336,7 +336,7 @@ def upload_log():
             }
         }
         response = urlopen(make_request(GIST_API_URL),
-                           json.dumps(data))
+                           json.dumps(data).encode('utf-8'))
     except HTTPError as e:
         utils.log("Failed to save log: HTTPError %s" % e.code)
         return False

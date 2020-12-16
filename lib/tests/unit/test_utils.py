@@ -71,7 +71,7 @@ class UtilsTests(testtools.TestCase):
     def test_log(self, mock_log):
         utils.log('foo')
         mock_log.assert_called_once_with(
-            '[Test Add-on v0.0.1] foo', level=xbmc.LOGNOTICE)
+            '[Test Add-on v0.0.1] foo', level=xbmc.LOGINFO)
 
     @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('sys.exc_info')
@@ -146,7 +146,7 @@ class UtilsTests(testtools.TestCase):
         utils.log_kodi_platform_version()
         mock_log.assert_called_once_with(
             '[Test Add-on v0.0.1] Kodi 18.2 running on Linux',
-            level=xbmc.LOGNOTICE)
+            level=xbmc.LOGINFO)
 
     @mock.patch('aussieaddonscommon.utils.get_addon_version')
     def test_is_valid_version(self, mock_version):
