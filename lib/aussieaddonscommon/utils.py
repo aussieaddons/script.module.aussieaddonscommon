@@ -12,7 +12,7 @@ import _strptime  # noqa: F401
 
 from future.moves.html.entities import entitydefs
 from future.moves.urllib.parse import quote_plus, unquote_plus
-from future.utils import iteritems, string_types, text_type
+from future.utils import iteritems, text_type
 
 import xbmc
 
@@ -120,6 +120,16 @@ def log(s):
                               ensure_ascii(s)), level=xbmc.LOGINFO)
 
 
+def append_message(msg_list, msg):
+    """
+    Add message with newline to existing formatted msg
+    :param msg_list: list - contains title and content
+    :param msg: message to append to content
+    """
+    assert len(msg_list) == 2
+    msg_list[1] = '{0}\n{1}'.format(msg_list[1], msg)
+
+
 def format_error_summary():
     """Format error summary
 
@@ -160,11 +170,8 @@ def format_dialog_message(msg, title=None):
     else:
         content = ["%s v%s" % (get_addon_name(), get_addon_version())]
 
-    # Force unicode to str
-    if isinstance(msg, string_types):
-        msg = str(msg).split('\n')
-
-    return content + msg
+    content.append(ensure_ascii(msg))
+    return content
 
 
 def format_dialog_error(msg=None):
@@ -260,20 +267,22 @@ def is_valid_country(connection_info, message=None):
         if country_code:
             from aussieaddonscommon import countries
             country_name = countries.countries.get(country_code, country_code)
-            message.append('Your country is reported as %s, but this service '
-                           'is probably geo-blocked to Australia.' %
-                           country_name)
+            append_message(message,
+                           'Your country is reported as {0}, but this '
+                           'service is probably geo-blocked to '
+                           'Australia.'.format(country_name))
             xbmcgui.Dialog().ok(*message)
             return False
 
     if blacklisted_hostname:
-        message.append('VPN/proxy detected that has been blocked by this '
+        append_message(message,
+                       'VPN/proxy detected that has been blocked by this '
                        'content provider.')
         xbmcgui.Dialog().ok(*message)
         return False
 
     if not is_valid_version():
-        message.append('Invalid version number for issue report. ')
+        append_message(message, 'Invalid version number for issue report. ')
         xbmcgui.Dialog().ok(*message)
         return False
 
@@ -335,10 +344,9 @@ def send_report(title, trace=None, connection_info=None):
         report_url = issue_reporter.report_issue(title, trace, connection_info)
 
         split_url = report_url.replace('/issue-reports', ' /issue-reports')
-        dialog_message(['Thanks! Your issue has been reported to: ',
-                        split_url,
-                        'Please visit and describe the issue in order for '
-                        'us to assist.'])
+        dialog_message('Thanks! Your issue has been reported to: {0}\n'
+                       'Please visit and describe the issue in order '
+                       'for us to assist.'.format(split_url))
         return report_url
     except Exception:
         traceback.print_exc()
@@ -394,14 +402,16 @@ def handle_error(message):
     version = get_addon_version()
 
     if issue_reporter.is_not_latest_version(version, latest):
-        message.append('Your version of this add-on (v%s) is outdated. Please '
-                       'upgrade to the latest version: '
-                       'v%s' % (version, latest))
+        append_message(message,
+                       'Your version of this add-on (v{0}) is outdated. '
+                       'Please upgrade to the latest version: '
+                       'v{1}'.format(version, latest))
         xbmcgui.Dialog().ok(*message)
         return
 
     if is_reportable:
-        message.append('Would you like to automatically '
+        append_message(message,
+                       'Would you like to automatically '
                        'report this error?')
         if xbmcgui.Dialog().yesno(*message):
             issue_url = send_report(error, trace=trace,
