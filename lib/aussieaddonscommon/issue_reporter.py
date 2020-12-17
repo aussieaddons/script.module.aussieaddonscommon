@@ -70,7 +70,7 @@ def get_kodi_log():
 
     utils.log("Reading log file from \"%s\"" % log_file_path)
     with io.open(log_file_path, 'rb') as f:
-        log_content = f.read()
+        log_content = f.read().decode('utf-8')
     for pattern, repl in LOG_FILTERS:
         log_content = re.sub(pattern, repl, log_content)
     return log_content
@@ -129,7 +129,7 @@ def not_already_reported(error):
         else:
             f = io.open(rfile, 'rb')
             report = f.read()
-            if report != error:
+            if report != error.encode('utf-8'):
                 return True
     except Exception as e:
         utils.log("Error checking error report file: %s" % str(e))
@@ -143,8 +143,9 @@ def save_last_error_report(error):
     """Save a copy of our last error report"""
     try:
         rfile = os.path.join(utils.get_file_dir(), 'last_report_error.txt')
-        with io.open(rfile, 'w') as f:
+        with io.open(rfile, 'wb') as f:
             f.write(error)
+            return rfile
     except Exception:
         utils.log("Error writing error report file")
 

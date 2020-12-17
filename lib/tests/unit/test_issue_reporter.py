@@ -36,10 +36,10 @@ class IssueReporterTests(testtools.TestCase):
         observed = issue_reporter.get_connection_info()
         self.assertEqual({'Foo': 'Bar'}, observed)
 
-    @mock.patch('aussieaddonscommon.issue_reporter.io.open',
-                mock.mock_open(read_data=fakes.KODI_LOG))
+    @mock.patch('aussieaddonscommon.issue_reporter.io.open')
     @mock.patch('os.path.isfile')
-    def test_get_kodi_log(self, mock_isfile):
+    def test_get_kodi_log(self, mock_isfile, mock_open):
+        mock_open.return_value = io.BytesIO(fakes.KODI_LOG.encode('utf-8'))
         mock_isfile.return_value = True
         observed = issue_reporter.get_kodi_log()
         self.assertEqual(fakes.KODI_LOG_FILTERED, observed)
@@ -70,13 +70,14 @@ class IssueReporterTests(testtools.TestCase):
         self.assertIs(
             issue_reporter.is_not_latest_version(current, latest), False)
 
-    @mock.patch('aussieaddonscommon.issue_reporter.io.open',
-                mock.mock_open(read_data=fakes.KODI_LOG))
+    @mock.patch('aussieaddonscommon.issue_reporter.io.open')
     @mock.patch('aussieaddonscommon.utils.get_file_dir')
     @mock.patch('os.path.isfile')
-    def test_not_already_reported(self, mock_isfile, mock_get_file_dir):
+    def test_not_already_reported(self, mock_isfile, mock_get_file_dir,
+                                  mock_open):
         mock_get_file_dir.return_value = ''
         mock_isfile.return_value = True
+        mock_open.return_value = io.BytesIO(fakes.KODI_LOG.encode('utf-8'))
         observed = issue_reporter.not_already_reported(fakes.KODI_LOG)
         self.assertEqual(False, observed)
         observed = issue_reporter.not_already_reported(fakes.KODI_LOG_FILTERED)

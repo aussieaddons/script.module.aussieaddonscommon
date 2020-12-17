@@ -417,4 +417,6 @@ def handle_error(message):
             issue_url = send_report(error, trace=trace,
                                     connection_info=connection_info)
             if issue_url:
-                issue_reporter.save_last_error_report(error)
+                report_file = issue_reporter.save_last_error_report(error)
+                if report_file:
+                    log('Saved error report heading: {0}'.format(report_file))
