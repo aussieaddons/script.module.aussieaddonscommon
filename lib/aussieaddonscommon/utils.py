@@ -241,20 +241,43 @@ def log_kodi_platform_version():
     log("Kodi %s running on %s" % (version, platform))
 
 
-def is_valid_version():
+def is_valid_addon_version():
     """
     let's filter out the versions of our addons packaged with 'Kodi Boxes'
     that have high version numbers eg. 1001.1.3-2-g661cb6f
     :return:
     """
     version = get_addon_version()
-    if version.split('.')[0] == '1001':
+    try:
+        major = int(version.split('.')[0])
+        if major >= 20:
+            return False
+        else:
+            return True
+    except ValueError:
         return False
-    else:
-        return True
 
 
-def is_valid_country(connection_info, message=None):
+def is_addon_version_current():
+    addon_version = get_addon_version()
+    url_params = get_url(sys.argv[2])
+    url_version = url_params.get('addon_version')
+    if not url_version:
+        return False
+    return addon_version == url_version
+
+
+def is_valid_for_report(connection_info, message=None):
+    """
+    Test if conditions are met to submit a valid error report:
+    * IP/host within Australia
+    * Not a known VPN provider
+    * Add-on version is not from 3rd party
+    * Kodi URL is created with current version of add-on (i.e not old favorite)
+    :param connection_info: json from ipinfo.io
+    :param message: formatted dialog error message
+    :return:
+    """
     if not message:
         message = format_dialog_message('Issue report denied.')
 
@@ -281,9 +304,16 @@ def is_valid_country(connection_info, message=None):
         xbmcgui.Dialog().ok(*message)
         return False
 
-    if not is_valid_version():
+    if not is_valid_addon_version():
         append_message(message, 'Invalid version number for issue report. ')
         xbmcgui.Dialog().ok(*message)
+        return False
+
+    if not is_addon_version_current():
+        append_message(message, 'This item appears to be created with a '
+                                'different version of this add-on which may '
+                                'have caused this error, please '
+                                'remove and recreate the link/favorite.')
         return False
 
     return True
@@ -305,7 +335,7 @@ def user_report():
         from aussieaddonscommon import issue_reporter
         connection_info = issue_reporter.get_connection_info()
 
-        if not is_valid_country(connection_info):
+        if not is_valid_for_report(connection_info):
             return
         if not xbmcgui.Dialog().yesno('{0} v{1}'.format(
                 get_addon_name(), get_addon_version()),
@@ -387,7 +417,7 @@ def handle_error(message, force=False):
 
     connection_info = issue_reporter.get_connection_info()
 
-    if not is_valid_country(connection_info, message):
+    if not is_valid_for_report(connection_info, message):
         return
 
     is_reportable = issue_reporter.is_reportable(exc_type,

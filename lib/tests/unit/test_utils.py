@@ -149,21 +149,53 @@ class UtilsTests(testtools.TestCase):
             level=xbmc.LOGINFO)
 
     @mock.patch('aussieaddonscommon.utils.get_addon_version')
-    def test_is_valid_version(self, mock_version):
+    def test_is_valid_addon_version(self, mock_version):
         for ver in ['1.2.3', '0.0.1', '10.1.2-3~abcdef0']:
             mock_version.return_value = ver
-            observed = utils.is_valid_version()
+            observed = utils.is_valid_addon_version()
             self.assertEqual(True, observed)
         mock_version.return_value = '1001.1.3-2-abcdef0'
-        observed = utils.is_valid_version()
+        observed = utils.is_valid_addon_version()
         self.assertEqual(False, observed)
 
-    def test_is_valid_country(self):
+    @mock.patch('sys.argv', ['plugin://plugin.foo.bar/', '5',
+                             '?action=foo&addon_version=1.0.0',
+                             'resume:false'])
+    @mock.patch('aussieaddonscommon.utils.get_addon_version')
+    def test_is_addon_version_current_lower(self, mock_version):
+        mock_version.return_value = '1.0.1'
+        observed = utils.is_addon_version_current()
+        self.assertEqual(False, observed)
+
+    @mock.patch('sys.argv', ['plugin://plugin.foo.bar/', '5',
+                             '?action=foo&addon_version=1.0.1',
+                             'resume:false'])
+    @mock.patch('aussieaddonscommon.utils.get_addon_version')
+    def test_is_addon_version_current_equal(self, mock_version):
+        mock_version.return_value = '1.0.1'
+        observed = utils.is_addon_version_current()
+        self.assertEqual(True, observed)
+
+    @mock.patch('sys.argv', ['plugin://plugin.foo.bar/', '5',
+                             '?action=foo',
+                             'resume:false'])
+    @mock.patch('aussieaddonscommon.utils.get_addon_version')
+    def test_is_addon_version_current_missing(self, mock_version):
+        mock_version.return_value = '1.0.1'
+        observed = utils.is_addon_version_current()
+        self.assertEqual(False, observed)
+
+    @mock.patch('sys.argv', ['plugin://plugin.foo.bar/', '5',
+                             '?action=foo&addon_version=1.0.1',
+                             'resume:false'])
+    @mock.patch('aussieaddonscommon.utils.get_addon_version')
+    def test_is_valid_for_report(self, mock_version):
+        mock_version.return_value = '1.0.1'
         for connection_info in fakes.VALID_CONNECTION_INFO:
-            observed = utils.is_valid_country(connection_info)
+            observed = utils.is_valid_for_report(connection_info)
             self.assertEqual(True, observed)
         for connection_info in fakes.INVALID_CONNECTION_INFO:
-            observed = utils.is_valid_country(connection_info)
+            observed = utils.is_valid_for_report(connection_info)
             self.assertEqual(False, observed)
 
     @mock.patch('xbmc.executeJSONRPC')
@@ -172,11 +204,16 @@ class UtilsTests(testtools.TestCase):
             {'result': {'value': True}})
         self.assertEqual(True, utils.is_debug())
 
+    @mock.patch('sys.argv', ['plugin://plugin.foo.bar/', '5',
+                             '?action=foo&addon_version=1.0.1',
+                             'resume:false'])
+    @mock.patch('aussieaddonscommon.utils.get_addon_version')
     @mock.patch('aussieaddonscommon.utils.send_report')
     @mock.patch('aussieaddonscommon.issue_reporter.get_connection_info')
     @mock.patch('aussieaddonscommon.utils.is_debug')
     def test_user_report(self, mock_is_debug, mock_connection_info,
-                         mock_send_report):
+                         mock_send_report, mock_version):
+        mock_version.return_value = '1.0.1'
         mock_is_debug.return_value = True
         mock_connection_info.return_value = fakes.VALID_CONNECTION_INFO[0]
         utils.user_report()
@@ -193,6 +230,9 @@ class UtilsTests(testtools.TestCase):
             'Foo', trace=None, connection_info=fakes.VALID_CONNECTION_INFO[0])
         self.assertEqual(fakes.ISSUE_URL, observed)
 
+    @mock.patch('sys.argv', ['plugin://plugin.foo.bar/', '5',
+                             '?action=foo&addon_version=0.0.1',
+                             'resume:false'])
     @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('aussieaddonscommon.issue_reporter.save_last_error_report')
     @mock.patch('aussieaddonscommon.utils.send_report')
