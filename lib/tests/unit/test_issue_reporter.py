@@ -124,7 +124,9 @@ class IssueReporterTests(testtools.TestCase):
     def test_is_reportable(self, mock_not_reported):
         mock_not_reported.return_value = True
         observed = issue_reporter.is_reportable(fakes.FakeException,
-                                                fakes.EXC_VALUE, fakes.TB)
+                                                fakes.EXC_VALUE,
+                                                fakes.TB,
+                                                force=True)
         self.assertEqual(True, observed)
 
     def test_valid_country(self):

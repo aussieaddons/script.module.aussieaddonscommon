@@ -356,7 +356,7 @@ def send_report(title, trace=None, connection_info=None):
             dialog_progress.close()
 
 
-def handle_error(message):
+def handle_error(message, force=False):
     """Issue reporting handler
 
     This function should be called in the exception part of a try/catch block
@@ -365,6 +365,8 @@ def handle_error(message):
     Tests are performed to ensure we don't accept some user network type
     errors (like timeouts, etc), any errors from old versions of an add-on or
     any duplicate reports from a user.
+
+    :param force: bypass prevention of reporting when under test
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
 
@@ -390,7 +392,8 @@ def handle_error(message):
 
     is_reportable = issue_reporter.is_reportable(exc_type,
                                                  exc_value,
-                                                 exc_traceback)
+                                                 exc_traceback,
+                                                 force)
 
     # If already reported, or a non-reportable error, just show the error
     if not issue_reporter.not_already_reported(error) or not is_reportable:

@@ -163,15 +163,16 @@ def is_supported_addon():
         return True
 
 
-def is_reportable(exc_type, exc_value, exc_traceback):
+def is_reportable(exc_type, exc_value, exc_traceback, force=False):
     """Can we send an error report
 
     Based on a set of criteria, return a boolean determining whether the user
     should be allowed to send an error report.
 
     We prevent error reports being sent if:
-      * The same report has already been sent
-      * The error isn't blacklisted (mostly user networking issues)
+      * the same report has already been sent
+      * the error isn't blacklisted (mostly user networking issues)
+      * we are under test.
     """
 
     # AttributeError: global name 'foo' is not defined
@@ -205,6 +206,9 @@ def is_reportable(exc_type, exc_value, exc_traceback):
             return False
     except AttributeError:
         pass
+
+    if 'testtools' in sys.modules and not force:
+        return False
 
     return True
 

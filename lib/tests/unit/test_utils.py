@@ -219,7 +219,7 @@ class UtilsTests(testtools.TestCase):
         mock_not_already_reported.return_value = True
         mock_get_latest_version.return_value = '0.0.1'
         mock_yesno_dialog.return_value = True
-        utils.handle_error('Big error')
+        utils.handle_error('Big error', force=True)
         mock_send_report.assert_called_once_with(
             fakes.EXC_VALUE_FORMATTED, trace=''.join(
                 traceback.format_exception(fakes.FakeException,
