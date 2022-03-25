@@ -130,9 +130,19 @@ class UtilsTests(testtools.TestCase):
         self.assertEqual('18.2', utils.get_kodi_version())
 
     @mock.patch('xbmc.getInfoLabel')
+    def test_get_kodi_version_none(self, mock_info_label):
+        mock_info_label.return_value = None
+        self.assertEqual('0', utils.get_kodi_version())
+
+    @mock.patch('xbmc.getInfoLabel')
     def test_get_kodi_major_version(self, mock_info_label):
         mock_info_label.return_value = fakes.BUILD_VERSION
         self.assertEqual(18, utils.get_kodi_major_version())
+
+    @mock.patch('xbmc.getInfoLabel')
+    def test_get_kodi_major_version_blank(self, mock_info_label):
+        mock_info_label.return_value = ''
+        self.assertEqual(0, utils.get_kodi_major_version())
 
     @mock.patch('xbmcaddon.Addon', fakes.FakeAddon)
     @mock.patch('xbmc.log')
